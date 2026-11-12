@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: alf-api
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: DEV_MODE
+        value: "false"
+      - key: SUPABASE_URL
+        value: https://tuhenudwrazmaqgqsbjr.supabase.co
+      - key: SUPABASE_ANON_KEY
+        value: sb_publishable_MzplVhyg6e2wRj1jHDW64Q_DbCC3Zo4
+      - key: SUPABASE_JWT_SECRET
+        value: ""
+      - key: CORS_ORIGINS
+        value: https://alf-501.netlify.app
+      - key: DATABASE_URL
+        sync: false
