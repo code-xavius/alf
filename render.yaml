@@ -19,5 +19,7 @@ services:
         value: ""
       - key: CORS_ORIGINS
         value: https://alf-501.netlify.app
+      - key: FRONTEND_DIR
+        value: ""
       - key: DATABASE_URL
         sync: false
