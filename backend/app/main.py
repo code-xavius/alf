@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from .config import settings
 from .db import init_db
 from .realtime import manager
-from .routers import activities, questions, sessions, system, words
+from .routers import activities, questions, system, words
 
 logger = logging.getLogger("alf")
 
@@ -35,7 +35,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-for module in (system, sessions, activities, words, questions):
+for module in (system, activities, words, questions):
     app.include_router(module.router, prefix=settings.api_prefix)
 
 

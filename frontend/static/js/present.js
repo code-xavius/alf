@@ -5,20 +5,20 @@ const KIND_LABEL = {
   video: "Quiz vidéo",
 };
 
-let session = null;
-let currentActivityId = null;
+let activity = null;
 let participantCount = 0;
+let results = null;
+let occurrences = null;
 let socket = null;
 let stopped = false;
 let reconnectTimer = null;
-
-const occurrencesByActivity = {};
-const resultsByActivity = {};
 
 let renderTimer = null;
 let ytPlayer = null;
 let ytApiPromise = null;
 let videoFrame = null;
+
+let participants = [];
 
 function empty(text) {
   return ALF.el("div", { class: "stage-empty" }, text);
@@ -37,22 +37,14 @@ function button(label, onClick, solid = false, disabled = false) {
   );
 }
 
-function activeActivity() {
-  return (
-    session.activities.find((activity) => activity.id === currentActivityId) ||
-    session.activities[0] ||
-    null
-  );
-}
-
-function questionIndex(activity) {
+function questionIndex() {
   const total = activity.questions.length;
   if (!total) return 0;
   const raw = Number(activity.state?.current_question ?? 0);
   return Math.min(Math.max(raw, 0), total - 1);
 }
 
-function stageHead(activity) {
+function stageHead() {
   return ALF.el(
     "div",
     { class: "stage-head" },
@@ -66,12 +58,12 @@ function stageHead(activity) {
   );
 }
 
-function optionsBars(question, results, revealed) {
-  const total = results?.total || 0;
+function optionsBars(question, result, revealed) {
+  const total = result?.total || 0;
   const wrapper = ALF.el("div", { class: "vote-options" });
 
   question.options.forEach((option, index) => {
-    const count = results?.counts?.[index] || 0;
+    const count = result?.counts?.[index] || 0;
     const percent = total ? Math.round((count / total) * 100) : 0;
     const correct = revealed && question.correct_index === index;
 
@@ -94,24 +86,17 @@ function scheduleRender() {
 }
 
 function renderStage() {
+  updateParticipantCount();
   const stage = document.getElementById("stage");
-  const activity = activeActivity();
-
   if (!activity) {
     destroyYouTube();
     ALF.clear(stage);
-    stage.append(
-      empty(
-        session.activities.length
-          ? "Sélectionnez une activité."
-          : "Aucune activité. Configurez-en une dans le tableau de bord.",
-      ),
-    );
+    stage.append(empty("Activité introuvable."));
     return;
   }
 
   if (activity.kind === "video") {
-    renderVideo(activity, stage);
+    renderVideo(stage);
     return;
   }
 
@@ -119,18 +104,17 @@ function renderStage() {
   ALF.clear(stage);
 
   if (activity.kind === "wordcloud") {
-    renderWordcloud(activity, stage);
+    renderWordcloud(stage);
   } else {
-    renderQuestion(activity, stage);
+    renderQuestion(stage);
   }
 }
 
-function renderWordcloud(activity, stage) {
-  stage.append(stageHead(activity));
+function renderWordcloud(stage) {
+  stage.append(stageHead());
   const cloud = ALF.el("div", { id: "cloud" });
   stage.append(cloud);
 
-  const occurrences = occurrencesByActivity[activity.id];
   if (!occurrences) {
     cloud.append(empty("Chargement des mots…"));
     return;
@@ -205,20 +189,18 @@ function renderWordcloud(activity, stage) {
   }
 }
 
-function renderQuestion(activity, stage) {
-  stage.append(stageHead(activity));
+function renderQuestion(stage) {
+  stage.append(stageHead());
 
   if (activity.questions.length === 0) {
     stage.append(empty("Aucune question pour cette activité."));
     return;
   }
 
-  const index = questionIndex(activity);
+  const index = questionIndex();
   const question = activity.questions[index];
   const state = activity.state || {};
-  const results = resultsByActivity[activity.id]?.questions.find(
-    (entry) => entry.id === question.id,
-  );
+  const result = results?.questions.find((entry) => entry.id === question.id);
 
   stage.append(
     ALF.el(
@@ -228,13 +210,13 @@ function renderQuestion(activity, stage) {
     ),
   );
   stage.append(ALF.el("div", { class: "big-question" }, question.prompt));
-  stage.append(optionsBars(question, results, !!state.revealed));
+  stage.append(optionsBars(question, result, !!state.revealed));
 
   const controls = ALF.el("div", { class: "controls" });
   controls.append(
     button(
       "Précédent",
-      () => patchState(activity, { current_question: index - 1, revealed: false }),
+      () => patchState({ current_question: index - 1, revealed: false }),
       false,
       index === 0,
     ),
@@ -242,40 +224,37 @@ function renderQuestion(activity, stage) {
   controls.append(
     button(
       "Suivant",
-      () => patchState(activity, { current_question: index + 1, revealed: false }),
+      () => patchState({ current_question: index + 1, revealed: false }),
       false,
       index >= activity.questions.length - 1,
     ),
   );
   if (question.kind === "mcq") {
     controls.append(
-      button(
-        state.revealed ? "Cacher la réponse" : "Révéler",
-        () => patchState(activity, { revealed: !state.revealed }),
+      button(state.revealed ? "Cacher la réponse" : "Révéler", () =>
+        patchState({ revealed: !state.revealed }),
       ),
     );
   }
   stage.append(controls);
 }
 
-function renderVideo(activity, stage) {
+function renderVideo(stage) {
   const videoId = activity.config?.video_id;
   if (!videoId) {
     destroyYouTube();
     ALF.clear(stage);
-    stage.append(stageHead(activity), empty("Vidéo non configurée."));
+    stage.append(stageHead(), empty("Vidéo non configurée."));
     return;
   }
 
   const needsRebuild =
-    !videoFrame ||
-    videoFrame.activityId !== activity.id ||
-    videoFrame.videoId !== videoId;
+    !videoFrame || videoFrame.activityId !== activity.id || videoFrame.videoId !== videoId;
 
   if (needsRebuild) {
     destroyYouTube();
     ALF.clear(stage);
-    stage.append(stageHead(activity));
+    stage.append(stageHead());
 
     const wrapper = ALF.el("div", { class: "video-wrap" });
     const playerDiv = ALF.el("div", { class: "yt", id: "yt-player" });
@@ -289,13 +268,13 @@ function renderVideo(activity, stage) {
     createYouTube(videoId, playerDiv);
   }
 
-  updateVideoUI(activity);
+  updateVideoUI();
 }
 
-function updateVideoUI(activity) {
+function updateVideoUI() {
   if (!videoFrame) return;
   const state = activity.state || {};
-  const index = questionIndex(activity);
+  const index = questionIndex();
   const question = activity.questions[index];
   const open = !!state.question_open && !!question;
 
@@ -303,9 +282,7 @@ function updateVideoUI(activity) {
   videoFrame.overlay.classList.toggle("hidden", !open);
 
   if (open) {
-    const results = resultsByActivity[activity.id]?.questions.find(
-      (entry) => entry.id === question.id,
-    );
+    const result = results?.questions.find((entry) => entry.id === question.id);
     videoFrame.overlay.append(
       ALF.el(
         "div",
@@ -313,7 +290,7 @@ function updateVideoUI(activity) {
         `Question ${index + 1} / ${activity.questions.length}`,
       ),
       ALF.el("div", { class: "big-question" }, question.prompt),
-      optionsBars(question, results, !!state.revealed),
+      optionsBars(question, result, !!state.revealed),
     );
   }
 
@@ -330,7 +307,7 @@ function updateVideoUI(activity) {
     videoFrame.controls.append(
       button(
         label,
-        () => openVideoQuestion(activity, questionIndexValue),
+        () => openVideoQuestion(questionIndexValue),
         open && questionIndexValue === index,
       ),
     );
@@ -338,19 +315,19 @@ function updateVideoUI(activity) {
 
   if (open) {
     videoFrame.controls.append(
-      button("Fermer la question", () => patchState(activity, { question_open: false })),
+      button("Fermer la question", () => patchState({ question_open: false })),
     );
     if (question.kind === "mcq") {
       videoFrame.controls.append(
         button(state.revealed ? "Cacher la réponse" : "Révéler", () =>
-          patchState(activity, { revealed: !state.revealed }),
+          patchState({ revealed: !state.revealed }),
         ),
       );
     }
   }
 }
 
-function openVideoQuestion(activity, index) {
+function openVideoQuestion(index) {
   const question = activity.questions[index];
   if (question && ytPlayer && question.video_ts !== null && question.video_ts !== undefined) {
     try {
@@ -360,11 +337,7 @@ function openVideoQuestion(activity, index) {
       /* the player may not be ready yet */
     }
   }
-  patchState(activity, {
-    current_question: index,
-    question_open: true,
-    revealed: false,
-  });
+  patchState({ current_question: index, question_open: true, revealed: false });
 }
 
 function loadYouTubeApi() {
@@ -402,7 +375,7 @@ function destroyYouTube() {
   videoFrame = null;
 }
 
-async function patchState(activity, patch) {
+async function patchState(patch) {
   const state = { ...(activity.state || {}), ...patch };
   activity.state = state;
   renderStage();
@@ -417,243 +390,192 @@ async function patchState(activity, patch) {
   }
 }
 
-async function refreshResults(activity, render = true) {
-  if (!activity) return;
+async function refreshResults(render = true) {
+  if (!activity || activity.kind === "wordcloud") return;
   try {
-    resultsByActivity[activity.id] = await ALF.api(`/activities/${activity.id}/results`);
+    results = await ALF.api(`/activities/${activity.id}/results`);
   } catch {
-    resultsByActivity[activity.id] = {
-      activity_id: activity.id,
-      kind: activity.kind,
-      questions: [],
-      words: [],
-    };
+    results = { activity_id: activity.id, kind: activity.kind, questions: [], words: [] };
   }
   if (render) scheduleRender();
 }
 
-async function ensureActivityData() {
-  const activity = activeActivity();
-  if (!activity) return;
-
-  if (activity.kind === "wordcloud") {
-    if (!occurrencesByActivity[activity.id]) {
-      try {
-        const words = await ALF.api(`/activities/${activity.id}/words/public`, {
-          auth: false,
-        });
-        const occurrences = {};
-        for (const word of words) {
-          occurrences[word.text] = (occurrences[word.text] || 0) + 1;
-        }
-        occurrencesByActivity[activity.id] = occurrences;
-      } catch {
-        occurrencesByActivity[activity.id] = {};
-      }
-    }
-    return;
-  }
-
-  if (!resultsByActivity[activity.id]) {
-    await refreshResults(activity, false);
-  }
-}
-
-function renderActivityNav() {
-  const nav = document.getElementById("activity-nav");
-  ALF.clear(nav);
-
-  if (session.activities.length === 0) {
-    nav.append(ALF.el("p", { class: "muted small" }, "Aucune activité."));
-    return;
-  }
-
-  for (const activity of session.activities) {
-    nav.append(
-      ALF.el(
-        "button",
-        {
-          class: `btn small${activity.id === currentActivityId ? " solid" : ""}`,
-          type: "button",
-          title: activity.title,
-          onclick: () => selectActivity(activity),
-        },
-        `${KIND_LABEL[activity.kind] || activity.kind} — ${activity.title}`,
-      ),
-    );
-  }
-}
-
-async function selectActivity(activity) {
-  currentActivityId = activity.id;
-  session.current_activity_id = activity.id;
-  renderActivityNav();
-  renderStage();
-
-  await ensureActivityData();
-  renderStage();
-
+async function loadWords() {
   try {
-    await ALF.api(`/sessions/${session.id}`, {
-      method: "PATCH",
-      body: { current_activity_id: activity.id, status: "live" },
-    });
-  } catch (error) {
-    ALF.toast(error.message);
+    const words = await ALF.api(`/activities/${activity.id}/words/public`, { auth: false });
+    occurrences = {};
+    for (const word of words) {
+      occurrences[word.text] = (occurrences[word.text] || 0) + 1;
+    }
+  } catch {
+    occurrences = {};
   }
 }
 
-async function refetchSession() {
-  const fresh = await ALF.api(`/sessions/code/${session.code}`, { auth: false });
-  const previousId = currentActivityId;
-  session = fresh;
-  participantCount = fresh.participant_count || 0;
-  currentActivityId = session.activities.some((activity) => activity.id === previousId)
-    ? previousId
-    : session.current_activity_id || session.activities[0]?.id || null;
-
-  document.getElementById("session-title").textContent = session.title;
-  updateParticipantCount();
-  renderActivityNav();
-  await ensureActivityData();
-  renderStage();
-}
-
-function applyActivityUpdate(message) {
-  const activity = session.activities.find((entry) => entry.id === message.activity_id);
-  if (!activity) return;
-  activity.title = message.title;
-  activity.config = message.config;
-  activity.state = message.state;
-  activity.position = message.position;
+function questionSignature() {
+  return activity ? activity.questions.map((question) => question.id).join(",") : "";
 }
 
 async function handleMessage(message) {
   switch (message.type) {
     case "participant_joined":
       participantCount = message.participant_count ?? participantCount;
-      updateParticipantCount();
       renderStage();
+      if (participantsOpen()) await loadParticipants();
       break;
-    case "session_updated":
-      session.status = message.status;
-      session.title = message.title;
-      document.getElementById("session-title").textContent = session.title;
-      if (message.current_activity_id) {
-        session.current_activity_id = message.current_activity_id;
-        currentActivityId = message.current_activity_id;
+    case "participant_banned":
+    case "participant_unbanned":
+      if (participantsOpen()) await loadParticipants();
+      break;
+    case "activity_updated": {
+      const previousSignature = questionSignature();
+      activity = message.activity;
+      participantCount = activity.participant_count ?? participantCount;
+      document.getElementById("activity-title").textContent = activity.title;
+      document.getElementById("activity-code").textContent = activity.code;
+      if (activity.kind !== "wordcloud" && questionSignature() !== previousSignature) {
+        results = null;
+        await refreshResults(false);
       }
-      renderActivityNav();
-      await ensureActivityData();
       renderStage();
       break;
-    case "activity_created":
-    case "activity_deleted":
-      await refetchSession();
-      break;
-    case "questions_updated":
-      delete resultsByActivity[message.activity_id];
-      await refetchSession();
-      break;
-    case "activity_updated":
-      applyActivityUpdate(message);
-      await ensureActivityData();
-      renderStage();
-      break;
+    }
     case "word_added":
-      if (message.activity_id === currentActivityId) {
-        const occurrences = occurrencesByActivity[message.activity_id] || {};
+      if (occurrences) {
         occurrences[message.text] = (occurrences[message.text] || 0) + 1;
-        occurrencesByActivity[message.activity_id] = occurrences;
         scheduleRender();
       }
       break;
     case "response_added":
-      if (message.activity_id === currentActivityId) {
-        await refreshResults(activeActivity(), false);
-        scheduleRender();
-      }
+      await refreshResults(false);
+      scheduleRender();
+      break;
+    case "activity_deleted":
+      stopped = true;
+      ALF.toast("L'activité a été supprimée.");
+      window.setTimeout(() => {
+        window.location.href = "dashboard.html";
+      }, 1200);
       break;
     default:
       break;
   }
 }
 
+function updateParticipantCount() {
+  document.getElementById("participant-count").textContent = String(participantCount);
+}
+
+function renderParticipants() {
+  const target = document.getElementById("participants-list");
+  ALF.clear(target);
+
+  if (participants.length === 0) {
+    target.append(ALF.el("p", { class: "muted small" }, "Aucun participant."));
+    return;
+  }
+
+  for (const participant of participants) {
+    const banned = participant.banned;
+    const meta = [
+      participant.ip || "IP inconnue",
+      participant.user_agent || "navigateur inconnu",
+      banned
+        ? `exclu jusqu'à ${ALF.formatDate(participant.banned_until)}`
+        : `arrivé le ${ALF.formatDate(participant.created_at)}`,
+    ].join(" · ");
+
+    target.append(
+      ALF.el(
+        "article",
+        { class: "participant" },
+        ALF.el(
+          "div",
+          { class: "participant-head" },
+          ALF.el("strong", {}, participant.nickname),
+          banned
+            ? button("Réactiver", () => setBan(participant, 0))
+            : button("Exclure", () => setBan(participant, banMinutes())),
+        ),
+        ALF.el("div", { class: "participant-meta" }, meta),
+      ),
+    );
+  }
+}
+
+async function loadParticipants() {
+  try {
+    participants = await ALF.api(`/activities/${activity.id}/participants`);
+    renderParticipants();
+  } catch (error) {
+    ALF.toast(error.message);
+  }
+}
+
+function banMinutes() {
+  return Number(document.getElementById("ban-minutes").value) || 10;
+}
+
+async function setBan(participant, minutes) {
+  try {
+    await ALF.api(`/activities/${activity.id}/participants/${participant.id}/ban`, {
+      method: "POST",
+      body: { minutes },
+    });
+    await loadParticipants();
+    ALF.toast(
+      minutes > 0
+        ? `${participant.nickname} exclu ${minutes} min.`
+        : `${participant.nickname} réactivé.`,
+    );
+  } catch (error) {
+    ALF.toast(error.message);
+  }
+}
+
+function participantsOpen() {
+  return !document.getElementById("participants-panel").classList.contains("hidden");
+}
+
 function connectSocket() {
-  if (stopped || !session) return;
-  socket = ALF.connect(session.code, handleMessage);
+  if (stopped || !activity) return;
+  socket = ALF.connect(activity.code, handleMessage);
   socket.onclose = () => {
     if (!stopped) reconnectTimer = window.setTimeout(connectSocket, 2000);
   };
 }
 
-function updateParticipantCount() {
-  document.getElementById("participant-count").textContent = String(participantCount);
-}
-
 function joinUrl() {
   const url = new URL("play.html", window.location.href);
-  url.search = `?code=${session.code}`;
+  url.search = `?code=${activity.code}`;
   return url.toString();
 }
 
 function renderQr() {
   const url = joinUrl();
   document.getElementById("join-url").textContent = url;
-  const canvas = document.getElementById("qrcode");
-  if (window.QRCode) {
-    window.QRCode.toCanvas(canvas, url, { width: 220, margin: 1 }, () => {});
+  const target = document.getElementById("qrcode");
+  ALF.clear(target);
+
+  if (typeof qrcode !== "function") {
+    target.append(ALF.el("p", { class: "small muted" }, url));
+    return;
   }
+
+  const qr = qrcode(0, "M");
+  qr.addData(url);
+  qr.make();
+  target.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 1, scalable: true });
 }
 
-function setupTimer() {
-  const display = document.getElementById("timer");
-  const startButton = document.getElementById("timer-start");
-  const resetButton = document.getElementById("timer-reset");
-  const minutesInput = document.getElementById("timer-minutes");
+document.getElementById("participants-toggle").addEventListener("click", async () => {
+  const panel = document.getElementById("participants-panel");
+  const hidden = panel.classList.toggle("hidden");
+  document.getElementById("participants-toggle").textContent = hidden ? "Afficher" : "Masquer";
+  if (!hidden) await loadParticipants();
+});
 
-  let remaining = 0;
-  let interval = null;
-
-  function paint() {
-    const minutes = Math.floor(remaining / 60);
-    const seconds = remaining % 60;
-    display.textContent = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-  }
-
-  function stop() {
-    if (interval) window.clearInterval(interval);
-    interval = null;
-    startButton.textContent = "Démarrer";
-  }
-
-  startButton.addEventListener("click", () => {
-    if (interval) {
-      stop();
-      return;
-    }
-    if (remaining <= 0) {
-      remaining = Math.max(1, Number(minutesInput.value) || 5) * 60;
-    }
-    startButton.textContent = "Pause";
-    interval = window.setInterval(() => {
-      remaining = Math.max(0, remaining - 1);
-      paint();
-      if (remaining === 0) {
-        stop();
-        ALF.toast("Temps écoulé.");
-      }
-    }, 1000);
-  });
-
-  resetButton.addEventListener("click", () => {
-    stop();
-    remaining = 0;
-    paint();
-  });
-
-  paint();
-}
+document.getElementById("participants-refresh").addEventListener("click", loadParticipants);
 
 document.getElementById("quit").addEventListener("click", () => {
   stopped = true;
@@ -666,22 +588,24 @@ document.getElementById("quit").addEventListener("click", () => {
   try {
     await ALF.requireAuth();
     const code = new URLSearchParams(window.location.search).get("code");
-    if (!code) throw new Error("Code de session manquant.");
+    if (!code) throw new Error("Code d'activité manquant.");
 
-    session = await ALF.api(`/sessions/code/${code}`, { auth: false });
-    currentActivityId = session.current_activity_id || session.activities[0]?.id || null;
-    participantCount = session.participant_count || 0;
+    activity = await ALF.api(`/activities/code/${code}`, { auth: false });
+    participantCount = activity.participant_count || 0;
 
-    document.getElementById("session-title").textContent = session.title;
-    document.getElementById("session-code").textContent = session.code;
+    document.getElementById("activity-title").textContent = activity.title;
+    document.getElementById("activity-code").textContent = activity.code;
+    document.getElementById("config-link").href = `activity.html?id=${activity.id}`;
+
+    if (activity.kind === "wordcloud") {
+      await loadWords();
+    } else {
+      await refreshResults(false);
+    }
 
     renderQr();
-    updateParticipantCount();
-    renderActivityNav();
-    await ensureActivityData();
     renderStage();
     connectSocket();
-    setupTimer();
 
     window.addEventListener("resize", scheduleRender);
   } catch (error) {

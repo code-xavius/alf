@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Configurer l'activité — alf</title>
+    <link rel="stylesheet" href="static/css/base.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="index.html">[alf]</a>
+      <nav>
+        <a class="btn" href="dashboard.html">Mes activités</a>
+        <button class="btn" id="logout" type="button">Déconnexion</button>
+      </nav>
+    </header>
+
+    <main class="container">
+      <p class="small"><a href="dashboard.html">← Mes activités</a></p>
+
+      <div class="row between">
+        <h1 id="title">Activité</h1>
+        <span class="badge" id="code"></span>
+      </div>
+
+      <div class="row" style="margin-bottom: 8px">
+        <a class="btn solid" id="present-link" href="#">Présenter</a>
+        <button class="btn" id="copy-link" type="button">Copier le lien participant</button>
+        <button class="btn" id="export" type="button">Export CSV</button>
+        <button class="btn" id="delete" type="button">Supprimer</button>
+      </div>
+      <p class="small muted" id="participant-url"></p>
+
+      <p id="error" class="error hidden"></p>
+
+      <div class="grid two">
+        <section class="card">
+          <h2>Réglages</h2>
+          <form id="settings-form">
+            <div class="field">
+              <label for="activity-title">Titre</label>
+              <input id="activity-title" maxlength="200" required />
+            </div>
+            <div class="field">
+              <label for="activity-status">Statut</label>
+              <select id="activity-status">
+                <option value="open">Ouverte (participants acceptés)</option>
+                <option value="closed">Fermée</option>
+              </select>
+            </div>
+            <button class="btn solid" type="submit">Enregistrer</button>
+          </form>
+        </section>
+
+        <section class="card" id="question-card">
+          <h2>Ajouter une question</h2>
+          <form id="question-form">
+            <div class="field">
+              <label for="prompt">Question</label>
+              <textarea id="prompt" rows="2" required></textarea>
+            </div>
+            <div class="field">
+              <label for="options">Options (une par ligne)</label>
+              <textarea id="options" rows="3" required></textarea>
+            </div>
+            <div class="field" id="correct-field">
+              <label for="correct">Bonne réponse</label>
+              <input id="correct" type="number" min="0" value="0" />
+            </div>
+            <div class="field hidden" id="video-field">
+              <label for="video-ts">Timestamp vidéo (secondes)</label>
+              <input id="video-ts" type="number" min="0" />
+            </div>
+            <div class="field">
+              <label for="time-limit">Temps limite en secondes (optionnel)</label>
+              <input id="time-limit" type="number" min="5" />
+            </div>
+            <button class="btn solid" type="submit">Ajouter la question</button>
+          </form>
+        </section>
+
+        <section class="card hidden" id="wordcloud-card">
+          <h2>Nuage de mots</h2>
+          <p class="muted">
+            Les participants envoient des mots depuis leur téléphone. Le nuage se
+            construit en direct sur l'écran de présentation.
+          </p>
+        </section>
+      </div>
+
+      <section id="questions-section">
+        <h2 style="margin-top: 26px">Questions</h2>
+        <div id="questions" class="list"></div>
+      </section>
+
+      <section style="margin-top: 26px">
+        <div class="row between">
+          <h2>Résultats</h2>
+          <button class="btn small" id="refresh-results" type="button">Actualiser</button>
+        </div>
+        <div id="results" class="card"></div>
+      </section>
+    </main>
+
+    <script src="static/js/config.js"></script>
+    <script src="static/js/alf.js"></script>
+    <script src="static/js/activity.js"></script>
+  </body>
+</html>

@@ -7,9 +7,28 @@ async def client() -> AsyncClient:
     return AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
 
 
-async def create_session(http: AsyncClient, title: str = "Cours test") -> dict:
-    response = await http.post("/api/sessions", json={"title": title})
+async def create_activity(
+    http: AsyncClient,
+    kind: str = "wordcloud",
+    title: str = "Activité test",
+    config: dict | None = None,
+) -> dict:
+    response = await http.post(
+        "/api/activities",
+        json={"kind": kind, "title": title, "config": config or {}},
+    )
     assert response.status_code == 201, response.text
+    return response.json()
+
+
+async def join(
+    http: AsyncClient, code: str, nickname: str, device_id: str | None = None
+) -> dict:
+    body = {"nickname": nickname}
+    if device_id is not None:
+        body["device_id"] = device_id
+    response = await http.post(f"/api/activities/code/{code}/join", json=body)
+    assert response.status_code == 200, response.text
     return response.json()
 
 
@@ -22,22 +41,11 @@ async def test_health() -> None:
 
 async def test_wordcloud_flow() -> None:
     async with await client() as http:
-        session = await create_session(http)
-        assert len(session["code"]) == 6
+        activity = await create_activity(http)
+        assert len(activity["code"]) == 6
+        assert activity["status"] == "open"
 
-        activity_response = await http.post(
-            f"/api/sessions/{session['id']}/activities",
-            json={"kind": "wordcloud", "title": "Nuage"},
-        )
-        assert activity_response.status_code == 201, activity_response.text
-        activity = activity_response.json()
-
-        join = await http.post(
-            f"/api/sessions/code/{session['code']}/join",
-            json={"nickname": "Alice"},
-        )
-        assert join.status_code == 200, join.text
-        participant = join.json()
+        participant = await join(http, activity["code"], "Alice")
 
         word = await http.post(
             f"/api/activities/{activity['id']}/words",
@@ -45,20 +53,17 @@ async def test_wordcloud_flow() -> None:
         )
         assert word.status_code == 201, word.text
 
+        public = (await http.get(f"/api/activities/code/{activity['code']}")).json()
+        assert public["participant_count"] == 1
+
         results = await http.get(f"/api/activities/{activity['id']}/results")
         assert results.status_code == 200, results.text
         assert results.json()["words"] == [{"text": "Python", "count": 1}]
 
 
-async def test_poll_flow_and_reveal() -> None:
+async def test_poll_flow() -> None:
     async with await client() as http:
-        session = await create_session(http, "Vote")
-        activity = (
-            await http.post(
-                f"/api/sessions/{session['id']}/activities",
-                json={"kind": "poll", "title": "Quel langage ?"},
-            )
-        ).json()
+        activity = await create_activity(http, "poll", "Quel langage ?")
 
         question = (
             await http.post(
@@ -71,12 +76,7 @@ async def test_poll_flow_and_reveal() -> None:
             )
         ).json()
 
-        participant = (
-            await http.post(
-                f"/api/sessions/code/{session['code']}/join",
-                json={"nickname": "Bob"},
-            )
-        ).json()
+        participant = await join(http, activity["code"], "Bob")
 
         answer = await http.post(
             f"/api/questions/{question['id']}/responses",
@@ -96,15 +96,9 @@ async def test_poll_flow_and_reveal() -> None:
         assert results["questions"][0]["total"] == 1
 
 
-async def test_public_session_hides_answers_until_reveal() -> None:
+async def test_public_activity_hides_answers_until_reveal() -> None:
     async with await client() as http:
-        session = await create_session(http, "Quiz")
-        activity = (
-            await http.post(
-                f"/api/sessions/{session['id']}/activities",
-                json={"kind": "quiz", "title": "Quiz"},
-            )
-        ).json()
+        activity = await create_activity(http, "quiz", "Quiz")
         await http.post(
             f"/api/activities/{activity['id']}/questions",
             json={
@@ -115,12 +109,84 @@ async def test_public_session_hides_answers_until_reveal() -> None:
             },
         )
 
-        public = (await http.get(f"/api/sessions/code/{session['code']}")).json()
-        assert public["activities"][0]["questions"][0]["correct_index"] is None
+        public = (await http.get(f"/api/activities/code/{activity['code']}")).json()
+        assert public["questions"][0]["correct_index"] is None
 
         await http.patch(
             f"/api/activities/{activity['id']}",
             json={"state": {"current_question": 0, "revealed": True}},
         )
-        revealed = (await http.get(f"/api/sessions/code/{session['code']}")).json()
-        assert revealed["activities"][0]["questions"][0]["correct_index"] == 1
+        revealed = (await http.get(f"/api/activities/code/{activity['code']}")).json()
+        assert revealed["questions"][0]["correct_index"] == 1
+
+
+async def test_close_and_delete_activity() -> None:
+    async with await client() as http:
+        activity = await create_activity(http, "wordcloud", "À fermer")
+
+        updated = await http.patch(
+            f"/api/activities/{activity['id']}",
+            json={"status": "closed"},
+        )
+        assert updated.status_code == 200, updated.text
+        assert updated.json()["status"] == "closed"
+
+        refused = await http.post(
+            f"/api/activities/code/{activity['code']}/join",
+            json={"nickname": "Alice"},
+        )
+        assert refused.status_code == 400
+
+        deleted = await http.delete(f"/api/activities/{activity['id']}")
+        assert deleted.status_code == 204
+
+        missing = await http.get(f"/api/activities/{activity['id']}")
+        assert missing.status_code == 404
+
+async def test_participant_list_and_temporary_ban() -> None:
+    async with await client() as http:
+        activity = await create_activity(http)
+        alice = await join(http, activity["code"], "Alice", device_id="device-a")
+        bob = await join(http, activity["code"], "Bob", device_id="device-b")
+
+        listed = (
+            await http.get(f"/api/activities/{activity['id']}/participants")
+        ).json()
+        assert [entry["nickname"] for entry in listed] == ["Alice", "Bob"]
+        assert listed[0]["device_id"] == "device-a"
+        assert listed[0]["ip"] is not None
+        assert listed[0]["user_agent"] is not None
+        assert listed[0]["banned_until"] is None
+        assert listed[0]["banned"] is False
+
+        ban_url = f"/api/activities/{activity['id']}/participants/{alice['id']}/ban"
+        banned = await http.post(ban_url, json={"minutes": 10})
+        assert banned.status_code == 200, banned.text
+        assert banned.json()["banned_until"] is not None
+        relisted = (
+            await http.get(f"/api/activities/{activity['id']}/participants")
+        ).json()
+        assert relisted[0]["banned"] is True
+
+        refused = await http.post(
+            f"/api/activities/code/{activity['code']}/join",
+            json={"nickname": "Alice bis", "device_id": "device-a"},
+        )
+        assert refused.status_code == 403
+
+        blocked_word = await http.post(
+            f"/api/activities/{activity['id']}/words",
+            json={"text": "test", "participant_id": alice["id"]},
+        )
+        assert blocked_word.status_code == 403
+
+        carol = await join(http, activity["code"], "Carol", device_id="device-c")
+        assert carol["nickname"] == "Carol"
+        assert bob["nickname"] == "Bob"
+
+        unbanned = await http.post(ban_url, json={"minutes": 0})
+        assert unbanned.status_code == 200
+        assert unbanned.json()["banned_until"] is None
+
+        rejoined = await join(http, activity["code"], "Alice", device_id="device-a")
+        assert rejoined["id"] == alice["id"]

@@ -18,7 +18,7 @@ services:
       - key: SUPABASE_JWT_SECRET
         value: ""
       - key: CORS_ORIGINS
-        value: https://alf-501.netlify.app
+        value: https://alf-app.netlify.app,https://alf-501.netlify.app
       - key: FRONTEND_DIR
         value: ""
       - key: DATABASE_URL

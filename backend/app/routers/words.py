@@ -4,8 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user
 from ..db import get_db
-from ..deps import get_owned_activity
-from ..models import Activity, LiveSession, Participant, Word
+from ..deps import ensure_participant_active, get_owned_activity
+from ..models import Activity, Word
 from ..realtime import manager
 from ..schemas import WordCreate, WordRead
 
@@ -32,11 +32,11 @@ async def add_word(
     activity = await _activity_or_404(db, activity_id)
     if activity.kind != "wordcloud":
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Activité incompatible.")
+    if activity.status == "closed":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Cette activité est terminée.")
 
     if payload.participant_id is not None:
-        participant = await db.get(Participant, payload.participant_id)
-        if participant is None or participant.session_id != activity.session_id:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Participant inconnu.")
+        await ensure_participant_active(db, activity.id, payload.participant_id)
 
     word = Word(
         activity_id=activity.id,
@@ -47,17 +47,15 @@ async def add_word(
     await db.commit()
     await db.refresh(word)
 
-    code = await db.scalar(select(LiveSession.code).where(LiveSession.id == activity.session_id))
-    if code:
-        await manager.broadcast(
-            code,
-            {
-                "type": "word_added",
-                "activity_id": activity.id,
-                "text": word.text,
-                "created_at": word.created_at.isoformat(),
-            },
-        )
+    await manager.broadcast(
+        activity.code,
+        {
+            "type": "word_added",
+            "activity_id": activity.id,
+            "text": word.text,
+            "created_at": word.created_at.isoformat(),
+        },
+    )
     return WordRead.model_validate(word)
 
 

@@ -17,8 +17,8 @@ données.
   révélée quand l'animateur le décide.
 - **Quiz vidéo / audio** : utilisez une vidéo YouTube et affichez les questions
   à des moments précis.
-- **Sessions live** : un code à six caractères, un écran de présentation, une
-  page participant.
+- **Activités autonomes** : chaque activité a son propre code à six caractères,
+  son écran de présentation et sa page participant.
 - **Historique** : les réponses et les mots sont conservés en base, avec export
   CSV des résultats.
 
@@ -60,9 +60,9 @@ Dans un second terminal, servez le frontend :
 python -m http.server 5500 --directory frontend
 ```
 
-Ouvrez <http://localhost:5500>. Créez une session depuis le tableau de bord,
+Ouvrez <http://localhost:5500>. Créez une activité depuis le tableau de bord,
 ouvrez l'écran de présentation, puis faites rejoindre les participants avec le
-code affiché.
+code ou le QR code affiché.
 
 ## Configuration
 
@@ -78,7 +78,7 @@ Copiez `.env.example` vers `backend/.env` et ajustez les valeurs.
 | `SUPABASE_JWT_SECRET` | — | Secret de signature des jetons ; sinon JWKS est utilisé |
 | `CORS_ORIGINS` | origines locales | Origines autorisées, séparées par des virgules |
 | `FRONTEND_DIR` | — | Sert le frontend depuis le backend si défini |
-| `SESSION_CODE_LENGTH` | `6` | Longueur des codes de session |
+| `ACTIVITY_CODE_LENGTH` | `6` | Longueur des codes d'activité |
 
 ## Supabase
 
@@ -99,12 +99,11 @@ frontend. Seuls `SUPABASE_URL` et `SUPABASE_ANON_KEY` sont exposés.
 
 ## Déploiement
 
-### Backend sur Northflank
+### Backend sur Render
 
-- Construisez l'image avec le `Dockerfile` fourni.
+- Le blueprint `render.yaml` crée le service Docker à partir du `Dockerfile`.
 - Renseignez les variables d'environnement ci-dessus, avec `DEV_MODE=false` et
   `FRONTEND_DIR` vide si le frontend est servi par Netlify.
-- Exposez le port `8000`.
 - Ajoutez l'URL Netlify à `CORS_ORIGINS`.
 
 ### Frontend sur Netlify

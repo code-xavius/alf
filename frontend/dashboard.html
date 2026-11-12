@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Tableau de bord — alf</title>
+    <title>Mes activités — alf</title>
     <link rel="stylesheet" href="static/css/base.css" />
   </head>
   <body>
@@ -17,26 +17,40 @@
 
     <main class="container">
       <div class="row between">
-        <h1>Mes sessions</h1>
+        <h1>Mes activités</h1>
       </div>
 
       <form id="create-form" class="card">
-        <div class="row">
-          <div style="flex: 1; min-width: 220px">
-            <label for="session-title">Nouvelle session</label>
+        <h2>Nouvelle activité</h2>
+        <div class="grid two">
+          <div class="field">
+            <label for="activity-kind">Type</label>
+            <select id="activity-kind">
+              <option value="wordcloud">Nuage de mots</option>
+              <option value="poll">Vote en direct</option>
+              <option value="quiz">Quiz</option>
+              <option value="video">Quiz vidéo / audio</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="activity-title">Titre</label>
             <input
-              id="session-title"
-              placeholder="Ex. Cours d'algorithmique — semaine 3"
+              id="activity-title"
+              placeholder="Ex. Qu'avez-vous retenu ?"
               maxlength="200"
               required
             />
           </div>
-          <button class="btn solid" type="submit">Créer</button>
         </div>
+        <div class="field hidden" id="youtube-field">
+          <label for="youtube-url">Lien YouTube</label>
+          <input id="youtube-url" placeholder="https://www.youtube.com/watch?v=…" />
+        </div>
+        <button class="btn solid" type="submit">Créer l'activité</button>
         <p id="error" class="error hidden"></p>
       </form>
 
-      <div id="sessions" class="list"></div>
+      <div id="activities" class="list"></div>
     </main>
 
     <script src="static/js/config.js"></script>

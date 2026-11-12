@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 ActivityKind = Literal["wordcloud", "poll", "quiz", "video"]
 QuestionKind = Literal["mcq", "poll"]
-SessionStatus = Literal["draft", "live", "closed"]
+ActivityStatus = Literal["open", "closed"]
 
 
 class ORMModel(BaseModel):
@@ -23,25 +23,6 @@ class MeOut(BaseModel):
     user_id: str
 
 
-class SessionCreate(BaseModel):
-    title: str = Field(min_length=1, max_length=200)
-
-
-class SessionUpdate(BaseModel):
-    title: str | None = Field(default=None, min_length=1, max_length=200)
-    status: SessionStatus | None = None
-    current_activity_id: str | None = None
-
-
-class SessionSummary(ORMModel):
-    id: str
-    code: str
-    title: str
-    status: str
-    current_activity_id: str | None
-    created_at: datetime
-
-
 class QuestionRead(ORMModel):
     id: str
     prompt: str
@@ -55,16 +36,24 @@ class QuestionRead(ORMModel):
 
 class ActivityRead(ORMModel):
     id: str
+    code: str
     kind: str
     title: str
     config: dict[str, Any]
     state: dict[str, Any]
-    position: int
+    status: str
+    created_at: datetime
     questions: list[QuestionRead] = []
 
 
-class SessionDetail(SessionSummary):
-    activities: list[ActivityRead] = []
+class ActivitySummary(BaseModel):
+    id: str
+    code: str
+    kind: str
+    title: str
+    status: str
+    participant_count: int = 0
+    created_at: datetime
 
 
 class PublicQuestion(BaseModel):
@@ -79,36 +68,27 @@ class PublicQuestion(BaseModel):
 
 class PublicActivity(BaseModel):
     id: str
+    code: str
     kind: str
     title: str
     config: dict[str, Any]
     state: dict[str, Any]
-    position: int
-    questions: list[PublicQuestion] = []
-
-
-class PublicSession(BaseModel):
-    id: str
-    code: str
-    title: str
     status: str
-    current_activity_id: str | None
     participant_count: int = 0
-    activities: list[PublicActivity] = []
+    questions: list[PublicQuestion] = []
 
 
 class ActivityCreate(BaseModel):
     kind: ActivityKind
     title: str = Field(min_length=1, max_length=200)
     config: dict[str, Any] = Field(default_factory=dict)
-    position: int | None = None
 
 
 class ActivityUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
     config: dict[str, Any] | None = None
     state: dict[str, Any] | None = None
-    position: int | None = None
+    status: ActivityStatus | None = None
 
 
 class QuestionCreate(BaseModel):
@@ -148,12 +128,33 @@ class QuestionUpdate(BaseModel):
 
 class JoinRequest(BaseModel):
     nickname: str = Field(min_length=1, max_length=60)
+    device_id: str | None = Field(default=None, max_length=64)
 
 
 class ParticipantRead(ORMModel):
     id: str
     nickname: str
-    session_id: str
+    activity_id: str
+
+
+class ParticipantAdmin(ORMModel):
+    id: str
+    nickname: str
+    ip: str | None
+    user_agent: str | None
+    device_id: str | None
+    banned_until: datetime | None
+    banned: bool = False
+    created_at: datetime
+
+
+class ParticipantBan(BaseModel):
+    minutes: int = Field(default=10, ge=0, le=10080)
+
+
+class ParticipantBanOut(BaseModel):
+    id: str
+    banned_until: datetime | None
 
 
 class WordCreate(BaseModel):

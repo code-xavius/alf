@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     supabase_anon_key: str | None = None
     supabase_jwt_secret: str | None = None
 
-    session_code_length: int = 6
+    activity_code_length: int = 6
 
     @property
     def cors_origin_list(self) -> list[str]:

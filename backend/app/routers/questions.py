@@ -9,9 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from ..auth import get_current_user
+from ..broadcast import broadcast_activity
 from ..db import get_db
-from ..deps import get_owned_activity
-from ..models import Activity, LiveSession, Participant, Question, Response, Word
+from ..deps import ensure_participant_active, get_owned_activity
+from ..models import Activity, Question, Response, Word
 from ..realtime import manager
 from ..schemas import (
     ActivityResults,
@@ -26,22 +27,20 @@ from ..schemas import (
 router = APIRouter(tags=["questions"])
 
 
-async def _load_activity(db: AsyncSession, activity_id: str) -> Activity:
+async def _load_activity(db: AsyncSession, activity_id: str) -> Activity | None:
     result = await db.execute(
-        select(Activity).options(selectinload(Activity.questions)).where(Activity.id == activity_id)
+        select(Activity)
+        .options(selectinload(Activity.questions))
+        .where(Activity.id == activity_id)
     )
-    activity = result.scalar_one_or_none()
-    if activity is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Activité introuvable.")
-    return activity
+    return result.scalar_one_or_none()
 
 
 async def _owned_question(db: AsyncSession, question_id: str, user_id: str) -> Question:
     question = await db.scalar(
         select(Question)
         .join(Activity, Question.activity_id == Activity.id)
-        .join(LiveSession, Activity.session_id == LiveSession.id)
-        .where(Question.id == question_id, LiveSession.owner_id == user_id)
+        .where(Question.id == question_id, Activity.owner_id == user_id)
     )
     if question is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Question introuvable.")
@@ -84,9 +83,9 @@ async def create_question(
     await db.commit()
     await db.refresh(question)
 
-    code = await db.scalar(select(LiveSession.code).where(LiveSession.id == activity.session_id))
-    if code:
-        await manager.broadcast(code, {"type": "questions_updated", "activity_id": activity_id})
+    refreshed = await _load_activity(db, activity_id)
+    if refreshed is not None:
+        await broadcast_activity(db, refreshed)
     return QuestionRead.model_validate(question)
 
 
@@ -107,6 +106,10 @@ async def update_question(
 
     await db.commit()
     await db.refresh(question)
+
+    refreshed = await _load_activity(db, question.activity_id)
+    if refreshed is not None:
+        await broadcast_activity(db, refreshed)
     return QuestionRead.model_validate(question)
 
 
@@ -118,17 +121,13 @@ async def delete_question(
 ) -> None:
     question = await _owned_question(db, question_id, user_id)
     activity_id = question.activity_id
-    activity = await db.get(Activity, activity_id)
 
     await db.delete(question)
     await db.commit()
 
-    if activity is not None:
-        code = await db.scalar(
-            select(LiveSession.code).where(LiveSession.id == activity.session_id)
-        )
-        if code:
-            await manager.broadcast(code, {"type": "questions_updated", "activity_id": activity_id})
+    refreshed = await _load_activity(db, activity_id)
+    if refreshed is not None:
+        await broadcast_activity(db, refreshed)
 
 
 @router.post("/questions/{question_id}/responses", response_model=ResponseResult)
@@ -144,10 +143,10 @@ async def submit_response(
     activity = await db.get(Activity, question.activity_id)
     if activity is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Activité introuvable.")
+    if activity.status == "closed":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Cette activité est terminée.")
 
-    participant = await db.get(Participant, payload.participant_id)
-    if participant is None or participant.session_id != activity.session_id:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Participant inconnu.")
+    await ensure_participant_active(db, activity.id, payload.participant_id)
 
     options = question.options or []
     if payload.value < 0 or payload.value >= len(options):
@@ -175,16 +174,14 @@ async def submit_response(
     db.add(response)
     await db.commit()
 
-    code = await db.scalar(select(LiveSession.code).where(LiveSession.id == activity.session_id))
-    if code:
-        await manager.broadcast(
-            code,
-            {
-                "type": "response_added",
-                "activity_id": activity.id,
-                "question_id": question_id,
-            },
-        )
+    await manager.broadcast(
+        activity.code,
+        {
+            "type": "response_added",
+            "activity_id": activity.id,
+            "question_id": question_id,
+        },
+    )
 
     return ResponseResult(recorded=True, is_correct=is_correct)
 
@@ -195,8 +192,10 @@ async def activity_results(
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user),
 ) -> ActivityResults:
-    activity = await get_owned_activity(db, activity_id, user_id)
+    await get_owned_activity(db, activity_id, user_id)
     activity = await _load_activity(db, activity_id)
+    if activity is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Activité introuvable.")
 
     question_results: list[QuestionResult] = []
     for question in activity.questions:
@@ -243,8 +242,10 @@ async def export_results(
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user),
 ) -> StreamingResponse:
-    activity = await get_owned_activity(db, activity_id, user_id)
+    await get_owned_activity(db, activity_id, user_id)
     activity = await _load_activity(db, activity_id)
+    if activity is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Activité introuvable.")
 
     buffer = io.StringIO()
     writer = csv.writer(buffer)

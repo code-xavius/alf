@@ -2,9 +2,7 @@
   command = "bash scripts/render-config.sh"
   publish = "frontend"
 
-[build.environment]
-  # Set ALF_API_BASE to the public backend URL in the Netlify dashboard.
-  ALF_API_BASE = "http://localhost:8000"
+# ALF_API_BASE is set in the Netlify project environment (production).
 
 [[headers]]
   for = "/*"

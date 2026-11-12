@@ -6,7 +6,7 @@ from fastapi import WebSocket
 
 
 class ConnectionManager:
-    """Keeps one room of WebSocket connections per session code.
+    """Keeps one room of WebSocket connections per activity code.
 
     Rooms live in memory. That is enough for a single backend instance, which
     is the target low-cost deployment. To scale horizontally, replace the

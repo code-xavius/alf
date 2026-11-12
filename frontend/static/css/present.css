@@ -66,6 +66,12 @@
   width: 100%;
 }
 
+#qrcode svg {
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
 .big-question {
   font-size: clamp(1.35rem, 2.6vw, 2.1rem);
   font-weight: bold;
@@ -122,10 +128,29 @@
   position: absolute;
 }
 
-.timer {
-  font-size: 2.4rem;
-  margin-bottom: 8px;
-  text-align: center;
+.participants-list {
+  display: grid;
+  gap: 8px;
+}
+
+.participant {
+  border: 1px solid var(--line);
+  font-size: 0.85rem;
+  padding: 8px;
+}
+
+.participant-head {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.participant-meta {
+  color: var(--muted);
+  font-size: 0.75rem;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 900px) {

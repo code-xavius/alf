@@ -25,43 +25,19 @@ def utcnow() -> datetime:
     return datetime.now(UTC)
 
 
-class LiveSession(Base):
-    __tablename__ = "sessions"
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
-    code: Mapped[str] = mapped_column(String(12), unique=True, index=True)
-    title: Mapped[str] = mapped_column(String(200))
-    owner_id: Mapped[str] = mapped_column(String(128), index=True)
-    status: Mapped[str] = mapped_column(String(20), default="draft")
-    current_activity_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-
-    activities: Mapped[list["Activity"]] = relationship(
-        back_populates="session",
-        cascade="all, delete-orphan",
-        order_by="Activity.position",
-    )
-    participants: Mapped[list["Participant"]] = relationship(
-        back_populates="session",
-        cascade="all, delete-orphan",
-    )
-
-
 class Activity(Base):
     __tablename__ = "activities"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
-    session_id: Mapped[str] = mapped_column(
-        ForeignKey("sessions.id", ondelete="CASCADE"), index=True
-    )
+    code: Mapped[str] = mapped_column(String(12), unique=True, index=True)
+    owner_id: Mapped[str] = mapped_column(String(128), index=True)
     kind: Mapped[str] = mapped_column(String(20))
     title: Mapped[str] = mapped_column(String(200))
     config: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     state: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
-    position: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(20), default="open")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
-    session: Mapped["LiveSession"] = relationship(back_populates="activities")
     words: Mapped[list["Word"]] = relationship(
         back_populates="activity", cascade="all, delete-orphan"
     )
@@ -70,20 +46,30 @@ class Activity(Base):
         cascade="all, delete-orphan",
         order_by="Question.position",
     )
+    participants: Mapped[list["Participant"]] = relationship(
+        back_populates="activity",
+        cascade="all, delete-orphan",
+    )
 
 
 class Participant(Base):
     __tablename__ = "participants"
-    __table_args__ = (UniqueConstraint("session_id", "nickname", name="uq_participant_nickname"),)
+    __table_args__ = (
+        UniqueConstraint("activity_id", "nickname", name="uq_participant_nickname"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
-    session_id: Mapped[str] = mapped_column(
-        ForeignKey("sessions.id", ondelete="CASCADE"), index=True
+    activity_id: Mapped[str] = mapped_column(
+        ForeignKey("activities.id", ondelete="CASCADE"), index=True
     )
     nickname: Mapped[str] = mapped_column(String(60))
+    ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(Text, nullable=True)
+    device_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    banned_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
-    session: Mapped["LiveSession"] = relationship(back_populates="participants")
+    activity: Mapped["Activity"] = relationship(back_populates="participants")
 
 
 class Word(Base):

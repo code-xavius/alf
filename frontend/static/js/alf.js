@@ -7,6 +7,7 @@ const ALF = (() => {
     : window.location.origin.replace(/^http/, "ws");
 
   const DEV_KEY = "alf_dev";
+  const DEVICE_KEY = "alf_device_id";
   const PARTICIPANT_PREFIX = "alf_participant_";
   const ANSWERS_PREFIX = "alf_answers_";
 
@@ -172,6 +173,18 @@ const ALF = (() => {
     return socket;
   }
 
+  function getDeviceId() {
+    let id = localStorage.getItem(DEVICE_KEY);
+    if (!id) {
+      id =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `dev-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      localStorage.setItem(DEVICE_KEY, id);
+    }
+    return id;
+  }
+
   function getParticipant(code) {
     try {
       return JSON.parse(localStorage.getItem(`${PARTICIPANT_PREFIX}${code.toUpperCase()}`) || "null");
@@ -265,6 +278,7 @@ const ALF = (() => {
     getConfig,
     requireAuth,
     connect,
+    getDeviceId,
     getParticipant,
     setParticipant,
     getAnswers,
