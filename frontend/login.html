@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Connexion — alf</title>
+    <link rel="stylesheet" href="static/css/base.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="index.html">[alf]</a>
+      <nav>
+        <a class="btn" href="index.html">Accueil</a>
+      </nav>
+    </header>
+
+    <main class="container narrow">
+      <div class="card">
+        <h1 id="title">Connexion</h1>
+        <p class="muted" id="hint">
+          Connectez-vous pour préparer vos sessions et retrouver l'historique des réponses.
+        </p>
+
+        <form id="auth-form">
+          <div class="field">
+            <label for="email">Email</label>
+            <input id="email" type="email" autocomplete="email" required />
+          </div>
+          <div class="field">
+            <label for="password">Mot de passe</label>
+            <input
+              id="password"
+              type="password"
+              autocomplete="current-password"
+              minlength="6"
+              required
+            />
+          </div>
+          <div class="row">
+            <button class="btn solid" id="submit" type="submit">Se connecter</button>
+            <button class="btn" id="toggle-signup" type="button">Créer un compte</button>
+          </div>
+          <p id="error" class="error hidden"></p>
+        </form>
+
+        <p id="dev-note" class="muted small hidden">
+          Mode développement : la connexion est simplifiée, aucun mot de passe n'est requis.
+        </p>
+      </div>
+    </main>
+
+    <script src="static/js/config.js"></script>
+    <script src="static/js/alf.js"></script>
+    <script src="static/js/login.js"></script>
+  </body>
+</html>

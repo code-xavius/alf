@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Présentation — alf</title>
+    <link rel="stylesheet" href="static/css/base.css" />
+    <link rel="stylesheet" href="static/css/present.css" />
+  </head>
+  <body class="present-body">
+    <header class="topbar">
+      <a class="brand" href="dashboard.html">[alf]</a>
+      <div class="row">
+        <span class="muted small" id="session-title"></span>
+        <span class="badge" id="session-code"></span>
+        <button class="btn" id="quit" type="button">Quitter</button>
+      </div>
+    </header>
+
+    <main class="present-layout">
+      <section class="stage" id="stage">
+        <div class="stage-empty">Chargement…</div>
+      </section>
+
+      <aside class="sidebar">
+        <div class="card sidebar-card">
+          <h2>Rejoindre</h2>
+          <canvas id="qrcode"></canvas>
+          <p class="small" id="join-url"></p>
+          <p class="small muted"><span id="participant-count">0</span> participant(s)</p>
+        </div>
+
+        <div class="card sidebar-card">
+          <h2>Activités</h2>
+          <div id="activity-nav" class="list"></div>
+        </div>
+
+        <div class="card sidebar-card">
+          <h2>Minuteur</h2>
+          <div class="timer" id="timer">00:00</div>
+          <div class="row">
+            <input id="timer-minutes" type="number" min="1" max="180" value="5" style="width: 90px" />
+            <button class="btn small solid" id="timer-start" type="button">Démarrer</button>
+            <button class="btn small" id="timer-reset" type="button">Reset</button>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-cloud/1.2.3/d3.layout.cloud.min.js"></script>
+    <script src="static/js/config.js"></script>
+    <script src="static/js/alf.js"></script>
+    <script src="static/js/present.js"></script>
+  </body>
+</html>

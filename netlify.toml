@@ -1,0 +1,19 @@
+[build]
+  command = "bash scripts/render-config.sh"
+  publish = "frontend"
+
+[build.environment]
+  # Set ALF_API_BASE to the public backend URL in the Netlify dashboard.
+  ALF_API_BASE = "http://localhost:8000"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "SAMEORIGIN"
+
+[[headers]]
+  for = "/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"

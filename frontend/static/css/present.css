@@ -1,0 +1,154 @@
+.present-body {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.present-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
+  padding: 16px;
+  flex: 1;
+  min-height: 0;
+}
+
+.stage {
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: 18px;
+  position: relative;
+}
+
+.stage-head {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.stage-empty {
+  color: var(--muted);
+  margin: auto;
+  text-align: center;
+}
+
+#cloud {
+  flex: 1;
+  min-height: 0;
+}
+
+#cloud svg {
+  height: 100%;
+  width: 100%;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.sidebar-card {
+  margin: 0;
+}
+
+#qrcode {
+  display: block;
+  margin: 0 auto 10px;
+  max-width: 220px;
+  width: 100%;
+}
+
+.big-question {
+  font-size: clamp(1.35rem, 2.6vw, 2.1rem);
+  font-weight: bold;
+  margin: 8px 0 16px;
+}
+
+.vote-options {
+  display: grid;
+  gap: 9px;
+}
+
+.vote-option {
+  border: 1px solid var(--line);
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 12px;
+}
+
+.vote-option .count {
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.vote-option.correct {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.video-wrap {
+  background: #000;
+  border: 1px solid var(--line);
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.video-wrap .yt,
+.video-wrap iframe {
+  border: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.video-question {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  inset: 0;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 24px;
+  position: absolute;
+}
+
+.timer {
+  font-size: 2.4rem;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .present-body {
+    height: auto;
+    overflow: auto;
+  }
+
+  .present-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: visible;
+  }
+
+  .sidebar-card {
+    min-width: 240px;
+  }
+
+  .stage {
+    min-height: 60vh;
+  }
+}

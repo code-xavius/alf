@@ -1,0 +1,15 @@
+services:
+  alf:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: sqlite+aiosqlite:////data/alf.db
+      DEV_MODE: "true"
+      FRONTEND_DIR: /app/frontend
+      CORS_ORIGINS: http://localhost:8000
+    volumes:
+      - alf-data:/data
+
+volumes:
+  alf-data:

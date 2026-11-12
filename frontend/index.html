@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>alf — animer vos cours et formations</title>
+    <meta
+      name="description"
+      content="Nuages de mots, votes en direct, quiz et quiz vidéo YouTube pour animer vos cours et formations."
+    />
+    <link rel="stylesheet" href="static/css/base.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="index.html">[alf]</a>
+      <nav>
+        <a class="btn" href="login.html">Se connecter</a>
+        <a class="btn solid" href="dashboard.html">Tableau de bord</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <section class="hero">
+        <h1>Animez vos cours.<br />Faites participer tout le monde.</h1>
+        <p class="lead">
+          Nuages de mots, votes en direct, quiz et quiz vidéo YouTube. Les participants
+          rejoignent avec un QR code depuis leur téléphone, sans installer d'application.
+        </p>
+        <div class="row">
+          <a class="btn solid" href="login.html">Créer une session</a>
+          <a class="btn" href="#features">Découvrir</a>
+        </div>
+      </section>
+
+      <section id="features" class="grid two features">
+        <article class="card feature">
+          <h3>Nuage de mots</h3>
+          <p>Posez une question, chacun envoie un mot, le nuage se construit en direct.</p>
+        </article>
+        <article class="card feature">
+          <h3>Vote en direct</h3>
+          <p>Sondez la salle en quelques secondes et affichez les résultats à l'écran.</p>
+        </article>
+        <article class="card feature">
+          <h3>Quiz</h3>
+          <p>Questions à choix multiples, réponses en temps réel, bonne réponse révélée quand vous décidez.</p>
+        </article>
+        <article class="card feature">
+          <h3>Quiz vidéo / audio</h3>
+          <p>Utilisez une vidéo YouTube et posez des questions à des moments précis.</p>
+        </article>
+      </section>
+
+      <section class="card">
+        <h2>Simple, léger, open source.</h2>
+        <p>
+          alf est un outil open source sous licence MIT. Le backend est en Python
+          (FastAPI), le frontend est en HTML/CSS/JS sans build. Il peut tourner sur une
+          infrastructure très légère.
+        </p>
+        <p class="muted small">
+          Comptes email / mot de passe via Supabase · Backend Northflank · Frontend Netlify
+        </p>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>[alf] — MIT</span>
+      <span class="muted">Python · FastAPI · Supabase · Netlify</span>
+    </footer>
+
+    <script src="static/js/config.js"></script>
+    <script src="static/js/alf.js"></script>
+  </body>
+</html>

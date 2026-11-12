@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tableau de bord — alf</title>
+    <link rel="stylesheet" href="static/css/base.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="index.html">[alf]</a>
+      <nav>
+        <span class="muted small" id="user-label"></span>
+        <button class="btn" id="logout" type="button">Déconnexion</button>
+      </nav>
+    </header>
+
+    <main class="container">
+      <div class="row between">
+        <h1>Mes sessions</h1>
+      </div>
+
+      <form id="create-form" class="card">
+        <div class="row">
+          <div style="flex: 1; min-width: 220px">
+            <label for="session-title">Nouvelle session</label>
+            <input
+              id="session-title"
+              placeholder="Ex. Cours d'algorithmique — semaine 3"
+              maxlength="200"
+              required
+            />
+          </div>
+          <button class="btn solid" type="submit">Créer</button>
+        </div>
+        <p id="error" class="error hidden"></p>
+      </form>
+
+      <div id="sessions" class="list"></div>
+    </main>
+
+    <script src="static/js/config.js"></script>
+    <script src="static/js/alf.js"></script>
+    <script src="static/js/dashboard.js"></script>
+  </body>
+</html>
