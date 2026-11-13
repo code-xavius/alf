@@ -2,14 +2,12 @@ const KIND_LABEL = {
   wordcloud: "Nuage de mots",
   poll: "Vote",
   quiz: "Quiz",
-  video: "Quiz vidéo",
 };
 
 const list = document.getElementById("activities");
 const errorBox = document.getElementById("error");
 const createForm = document.getElementById("create-form");
 const kindSelect = document.getElementById("activity-kind");
-const youtubeField = document.getElementById("youtube-field");
 
 let activities = [];
 
@@ -17,20 +15,29 @@ function statusLabel(status) {
   return { open: "ouverte", closed: "fermée" }[status] || status;
 }
 
-function youtubeId(url) {
-  try {
-    const parsed = new URL(url);
-    if (parsed.hostname.includes("youtu.be")) return parsed.pathname.slice(1);
-    return parsed.searchParams.get("v") || "";
-  } catch {
-    return "";
-  }
-}
-
 function participantUrl(code) {
   const url = new URL("play.html", window.location.href);
   url.search = `?code=${code}`;
   return url.toString();
+}
+
+function embedUrl(code) {
+  const url = new URL("present.html", window.location.href);
+  url.search = `?code=${code}&embed=1`;
+  return url.toString();
+}
+
+function escapeAttribute(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+function embedSnippet(activity) {
+  const src = embedUrl(activity.code).replaceAll("&", "&amp;");
+  return `<iframe src="${src}" width="960" height="540" style="border:0" allowfullscreen title="${escapeAttribute(activity.title)}"></iframe>`;
 }
 
 function renderActivities() {
@@ -94,6 +101,15 @@ function renderActivities() {
               {
                 class: "btn small",
                 type: "button",
+                onclick: () => copyEmbed(activity),
+              },
+              "Intégrer",
+            ),
+            ALF.el(
+              "button",
+              {
+                class: "btn small",
+                type: "button",
                 onclick: () => removeActivity(activity),
               },
               "Supprimer",
@@ -120,6 +136,16 @@ async function copyLink(activity) {
   }
 }
 
+async function copyEmbed(activity) {
+  const code = embedSnippet(activity);
+  try {
+    await navigator.clipboard.writeText(code);
+    ALF.toast("Code iframe copié.");
+  } catch {
+    window.prompt("Code iframe :", code);
+  }
+}
+
 async function removeActivity(activity) {
   if (!window.confirm(`Supprimer l'activité « ${activity.title} » ?`)) return;
   try {
@@ -131,10 +157,6 @@ async function removeActivity(activity) {
   }
 }
 
-kindSelect.addEventListener("change", () => {
-  youtubeField.classList.toggle("hidden", kindSelect.value !== "video");
-});
-
 createForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   errorBox.classList.add("hidden");
@@ -144,16 +166,6 @@ createForm.addEventListener("submit", async (event) => {
   if (!title) return;
 
   const body = { kind, title, config: {} };
-
-  if (kind === "video") {
-    const url = document.getElementById("youtube-url").value.trim();
-    const videoId = youtubeId(url);
-    if (!videoId) {
-      ALF.toast("Lien YouTube invalide.");
-      return;
-    }
-    body.config = { youtube_url: url, video_id: videoId };
-  }
 
   try {
     const activity = await ALF.api("/activities", { method: "POST", body });

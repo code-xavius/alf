@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 from ..auth import get_current_user
 from ..broadcast import broadcast_activity
 from ..db import get_db
-from ..deps import ensure_participant_active, get_owned_activity
+from ..deps import ensure_participant_active, get_owned_activity, load_activity_by_code
 from ..models import Activity, Question, Response, Word
 from ..realtime import manager
 from ..schemas import (
@@ -186,17 +186,9 @@ async def submit_response(
     return ResponseResult(recorded=True, is_correct=is_correct)
 
 
-@router.get("/activities/{activity_id}/results", response_model=ActivityResults)
-async def activity_results(
-    activity_id: str,
-    db: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user),
+async def _build_results(
+    db: AsyncSession, activity: Activity, include_correct: bool
 ) -> ActivityResults:
-    await get_owned_activity(db, activity_id, user_id)
-    activity = await _load_activity(db, activity_id)
-    if activity is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Activité introuvable.")
-
     question_results: list[QuestionResult] = []
     for question in activity.questions:
         rows = await db.execute(
@@ -214,7 +206,7 @@ async def activity_results(
                 prompt=question.prompt,
                 kind=question.kind,
                 options=question.options or [],
-                correct_index=question.correct_index,
+                correct_index=question.correct_index if include_correct else None,
                 counts=counts,
                 total=sum(counts),
             )
@@ -223,7 +215,7 @@ async def activity_results(
     words: list[dict] = []
     if activity.kind == "wordcloud":
         counter: Counter[str] = Counter()
-        text_rows = await db.scalars(select(Word.text).where(Word.activity_id == activity_id))
+        text_rows = await db.scalars(select(Word.text).where(Word.activity_id == activity.id))
         for text in text_rows:
             counter[text] += 1
         words = [{"text": text, "count": count} for text, count in counter.most_common(200)]
@@ -234,6 +226,31 @@ async def activity_results(
         questions=question_results,
         words=words,
     )
+
+
+@router.get("/activities/{activity_id}/results", response_model=ActivityResults)
+async def activity_results(
+    activity_id: str,
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_current_user),
+) -> ActivityResults:
+    await get_owned_activity(db, activity_id, user_id)
+    activity = await _load_activity(db, activity_id)
+    if activity is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Activité introuvable.")
+    return await _build_results(db, activity, include_correct=True)
+
+
+@router.get("/activities/code/{code}/results", response_model=ActivityResults)
+async def public_activity_results(
+    code: str,
+    db: AsyncSession = Depends(get_db),
+) -> ActivityResults:
+    activity = await load_activity_by_code(db, code)
+    if activity is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Activité introuvable.")
+    revealed = bool((activity.state or {}).get("revealed"))
+    return await _build_results(db, activity, include_correct=revealed)
 
 
 @router.get("/activities/{activity_id}/export.csv")

@@ -5,6 +5,10 @@ const KIND_LABEL = {
   video: "Quiz vidéo",
 };
 
+const params = new URLSearchParams(window.location.search);
+const embedMode = params.get("embed") === "1";
+if (embedMode) document.body.classList.add("embed-mode");
+
 let activity = null;
 let participantCount = 0;
 let results = null;
@@ -393,7 +397,10 @@ async function patchState(patch) {
 async function refreshResults(render = true) {
   if (!activity || activity.kind === "wordcloud") return;
   try {
-    results = await ALF.api(`/activities/${activity.id}/results`);
+    const path = embedMode
+      ? `/activities/code/${activity.code}/results`
+      : `/activities/${activity.id}/results`;
+    results = await ALF.api(path, { auth: !embedMode });
   } catch {
     results = { activity_id: activity.id, kind: activity.kind, questions: [], words: [] };
   }
@@ -452,10 +459,17 @@ async function handleMessage(message) {
       break;
     case "activity_deleted":
       stopped = true;
-      ALF.toast("L'activité a été supprimée.");
-      window.setTimeout(() => {
-        window.location.href = "dashboard.html";
-      }, 1200);
+      if (socket) socket.close();
+      if (embedMode) {
+        const stage = document.getElementById("stage");
+        ALF.clear(stage);
+        stage.append(empty("Activité supprimée."));
+      } else {
+        ALF.toast("L'activité a été supprimée.");
+        window.setTimeout(() => {
+          window.location.href = "dashboard.html";
+        }, 1200);
+      }
       break;
     default:
       break;
@@ -586,8 +600,8 @@ document.getElementById("quit").addEventListener("click", () => {
 
 (async () => {
   try {
-    await ALF.requireAuth();
-    const code = new URLSearchParams(window.location.search).get("code");
+    if (!embedMode) await ALF.requireAuth();
+    const code = params.get("code");
     if (!code) throw new Error("Code d'activité manquant.");
 
     activity = await ALF.api(`/activities/code/${code}`, { auth: false });
@@ -603,7 +617,7 @@ document.getElementById("quit").addEventListener("click", () => {
       await refreshResults(false);
     }
 
-    renderQr();
+    if (!embedMode) renderQr();
     renderStage();
     connectSocket();
 

@@ -15,6 +15,9 @@ const questionsSection = document.getElementById("questions-section");
 const questionsContainer = document.getElementById("questions");
 const resultsBox = document.getElementById("results");
 const participantUrlLabel = document.getElementById("participant-url");
+const questionKindField = document.getElementById("question-kind-field");
+const questionKindSelect = document.getElementById("question-kind");
+const correctField = document.getElementById("correct-field");
 
 let activity = null;
 
@@ -22,6 +25,25 @@ function participantUrl() {
   const url = new URL("play.html", window.location.href);
   url.search = `?code=${activity.code}`;
   return url.toString();
+}
+
+function embedUrl() {
+  const url = new URL("present.html", window.location.href);
+  url.search = `?code=${activity.code}&embed=1`;
+  return url.toString();
+}
+
+function escapeAttribute(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+function embedSnippet() {
+  const src = embedUrl().replaceAll("&", "&amp;");
+  return `<iframe src="${src}" width="960" height="540" style="border:0" allowfullscreen title="${escapeAttribute(activity.title)}"></iframe>`;
 }
 
 async function loadActivity() {
@@ -37,13 +59,17 @@ async function render() {
   document.getElementById("activity-status").value = activity.status;
   document.getElementById("present-link").href = `present.html?code=${activity.code}`;
   participantUrlLabel.textContent = participantUrl();
+  document.getElementById("embed-code").value = embedSnippet();
+  document.getElementById("embed-preview").href = embedUrl();
 
   const isWordcloud = activity.kind === "wordcloud";
+  const isPoll = activity.kind === "poll";
   questionCard.classList.toggle("hidden", isWordcloud);
   wordcloudCard.classList.toggle("hidden", !isWordcloud);
   questionsSection.classList.toggle("hidden", isWordcloud);
-  document.getElementById("correct-field").classList.toggle("hidden", activity.kind === "poll");
-  document.getElementById("video-field").classList.toggle("hidden", activity.kind !== "video");
+  questionKindField.classList.toggle("hidden", isPoll);
+  questionKindSelect.value = isPoll ? "poll" : "mcq";
+  updateCorrectField();
 
   renderQuestions();
   await loadResults();
@@ -90,10 +116,7 @@ function renderQuestions() {
         ALF.el(
           "div",
           { class: "small muted" },
-          question.kind === "mcq" ? "QCM" : "Vote",
-          question.video_ts !== null && question.video_ts !== undefined
-            ? ` · ${question.video_ts}s`
-            : "",
+          question.kind === "mcq" ? "QCM" : "Question avec choix",
           question.time_limit ? ` · ${question.time_limit}s max` : "",
         ),
         options,
@@ -179,6 +202,11 @@ function renderResults(results) {
   }
 }
 
+function updateCorrectField() {
+  const kind = activity.kind === "poll" ? "poll" : questionKindSelect.value;
+  correctField.classList.toggle("hidden", kind === "poll");
+}
+
 async function deleteQuestion(question) {
   if (!window.confirm("Supprimer cette question ?")) return;
   try {
@@ -188,6 +216,16 @@ async function deleteQuestion(question) {
     ALF.toast(error.message);
   }
 }
+
+document.getElementById("copy-embed").addEventListener("click", async () => {
+  const code = embedSnippet();
+  try {
+    await navigator.clipboard.writeText(code);
+    ALF.toast("Code iframe copié.");
+  } catch {
+    window.prompt("Code iframe :", code);
+  }
+});
 
 document.getElementById("settings-form").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -216,20 +254,17 @@ document.getElementById("question-form").addEventListener("submit", async (event
     .filter(Boolean);
   const timeLimit = document.getElementById("time-limit").value;
   const correct = document.getElementById("correct").value;
+  const questionKind = activity.kind === "poll" ? "poll" : questionKindSelect.value;
 
   const body = {
     prompt,
-    kind: activity.kind === "poll" ? "poll" : "mcq",
+    kind: questionKind,
     options,
     time_limit: timeLimit ? Number(timeLimit) : null,
   };
 
-  if (activity.kind !== "poll") {
+  if (questionKind === "mcq") {
     body.correct_index = Number(correct) || 0;
-  }
-  if (activity.kind === "video") {
-    const videoTs = document.getElementById("video-ts").value;
-    if (videoTs !== "") body.video_ts = Number(videoTs);
   }
 
   try {
@@ -241,6 +276,8 @@ document.getElementById("question-form").addEventListener("submit", async (event
     ALF.toast(error.message);
   }
 });
+
+questionKindSelect.addEventListener("change", updateCorrectField);
 
 document.getElementById("refresh-results").addEventListener("click", loadResults);
 

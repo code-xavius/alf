@@ -120,6 +120,41 @@ async def test_public_activity_hides_answers_until_reveal() -> None:
         assert revealed["questions"][0]["correct_index"] == 1
 
 
+async def test_public_results_for_embed() -> None:
+    async with await client() as http:
+        activity = await create_activity(http, "quiz", "Quiz embed")
+        question = (
+            await http.post(
+                f"/api/activities/{activity['id']}/questions",
+                json={
+                    "prompt": "Capitale de la France ?",
+                    "kind": "mcq",
+                    "options": ["Lyon", "Paris"],
+                    "correct_index": 1,
+                },
+            )
+        ).json()
+
+        participant = await join(http, activity["code"], "Alice")
+        await http.post(
+            f"/api/questions/{question['id']}/responses",
+            json={"participant_id": participant["id"], "value": 1},
+        )
+
+        hidden = await http.get(f"/api/activities/code/{activity['code']}/results")
+        assert hidden.status_code == 200, hidden.text
+        assert hidden.json()["questions"][0]["counts"] == [0, 1]
+        assert hidden.json()["questions"][0]["total"] == 1
+        assert hidden.json()["questions"][0]["correct_index"] is None
+
+        await http.patch(
+            f"/api/activities/{activity['id']}",
+            json={"state": {"current_question": 0, "revealed": True}},
+        )
+        revealed = await http.get(f"/api/activities/code/{activity['code']}/results")
+        assert revealed.json()["questions"][0]["correct_index"] == 1
+
+
 async def test_close_and_delete_activity() -> None:
     async with await client() as http:
         activity = await create_activity(http, "wordcloud", "À fermer")

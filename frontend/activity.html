@@ -31,6 +31,31 @@
       </div>
       <p class="small muted" id="participant-url"></p>
 
+      <section class="card" id="embed">
+        <div class="row between">
+          <h2 style="margin: 0">Intégrer dans une présentation</h2>
+          <a
+            class="btn small"
+            id="embed-preview"
+            href="#"
+            target="_blank"
+            rel="noopener"
+          >
+            Aperçu
+          </a>
+        </div>
+        <p class="small muted">
+          Collez ce code iframe dans une slide, une page ou un outil qui accepte le
+          HTML.
+        </p>
+        <textarea id="embed-code" rows="4" readonly></textarea>
+        <div class="row">
+          <button class="btn solid" id="copy-embed" type="button">
+            Copier le code iframe
+          </button>
+        </div>
+      </section>
+
       <p id="error" class="error hidden"></p>
 
       <div class="grid two">
@@ -59,6 +84,13 @@
               <label for="prompt">Question</label>
               <textarea id="prompt" rows="2" required></textarea>
             </div>
+            <div class="field" id="question-kind-field">
+              <label for="question-kind">Type de question</label>
+              <select id="question-kind">
+                <option value="mcq">Question à choix multiple (une bonne réponse)</option>
+                <option value="poll">Question avec choix (sans bonne réponse)</option>
+              </select>
+            </div>
             <div class="field">
               <label for="options">Options (une par ligne)</label>
               <textarea id="options" rows="3" required></textarea>
@@ -66,10 +98,6 @@
             <div class="field" id="correct-field">
               <label for="correct">Bonne réponse</label>
               <input id="correct" type="number" min="0" value="0" />
-            </div>
-            <div class="field hidden" id="video-field">
-              <label for="video-ts">Timestamp vidéo (secondes)</label>
-              <input id="video-ts" type="number" min="0" />
             </div>
             <div class="field">
               <label for="time-limit">Temps limite en secondes (optionnel)</label>

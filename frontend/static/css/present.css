@@ -12,6 +12,25 @@
   min-height: 0;
 }
 
+body.embed-mode .topbar,
+body.embed-mode .sidebar {
+  display: none;
+}
+
+body.embed-mode .present-layout {
+  gap: 0;
+  grid-template-columns: 1fr;
+  padding: 0;
+}
+
+body.embed-mode .stage {
+  border: 0;
+}
+
+body.embed-mode .controls {
+  display: none;
+}
+
 .stage {
   border: 1px solid var(--line);
   display: flex;
@@ -157,6 +176,15 @@
   .present-body {
     height: auto;
     overflow: auto;
+  }
+
+  body.embed-mode.present-body {
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  body.embed-mode .stage {
+    min-height: 0;
   }
 
   .present-layout {
