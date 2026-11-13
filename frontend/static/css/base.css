@@ -284,19 +284,6 @@ label {
   vertical-align: middle;
 }
 
-.code-block {
-  background: var(--soft);
-  border: 1px solid var(--line);
-  margin: 10px 0 14px;
-  overflow-x: auto;
-  padding: 10px;
-  white-space: pre;
-}
-
-.code-block code {
-  font: inherit;
-}
-
 .with-icon {
   align-items: center;
   display: inline-flex;
