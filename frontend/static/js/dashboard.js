@@ -84,7 +84,12 @@ function renderActivities() {
             ),
             ALF.el(
               "a",
-              { class: "btn small solid", href: `present.html?code=${activity.code}` },
+              {
+                class: "btn small solid",
+                href: `present.html?code=${activity.code}`,
+                target: "_blank",
+                rel: "noopener",
+              },
               "Présenter",
             ),
             ALF.el(
@@ -101,7 +106,7 @@ function renderActivities() {
               {
                 class: "btn small",
                 type: "button",
-                onclick: () => copyEmbed(activity),
+                onclick: () => openEmbed(activity),
               },
               "Intégrer",
             ),
@@ -136,8 +141,15 @@ async function copyLink(activity) {
   }
 }
 
-async function copyEmbed(activity) {
-  const code = embedSnippet(activity);
+function openEmbed(activity) {
+  document.getElementById("embed-code").value = embedSnippet(activity);
+  document.getElementById("embed-preview").href = embedUrl(activity.code);
+  const modal = document.getElementById("embed-modal");
+  if (!modal.open) modal.showModal();
+}
+
+async function copyEmbedCode() {
+  const code = document.getElementById("embed-code").value;
   try {
     await navigator.clipboard.writeText(code);
     ALF.toast("Code iframe copié.");
@@ -172,6 +184,18 @@ createForm.addEventListener("submit", async (event) => {
     window.location.href = `activity.html?id=${activity.id}`;
   } catch (error) {
     ALF.showError(errorBox, error);
+  }
+});
+
+document.getElementById("copy-embed").addEventListener("click", copyEmbedCode);
+
+document.getElementById("close-embed").addEventListener("click", () => {
+  document.getElementById("embed-modal").close();
+});
+
+document.getElementById("embed-modal").addEventListener("click", (event) => {
+  if (event.target === document.getElementById("embed-modal")) {
+    event.target.close();
   }
 });
 

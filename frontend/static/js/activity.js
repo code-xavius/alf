@@ -18,6 +18,14 @@ const participantUrlLabel = document.getElementById("participant-url");
 const questionKindField = document.getElementById("question-kind-field");
 const questionKindSelect = document.getElementById("question-kind");
 const correctField = document.getElementById("correct-field");
+const presentationControls = document.getElementById("presentation-controls");
+const controlProgress = document.getElementById("control-progress");
+const controlQuestion = document.getElementById("control-question");
+const controlPrev = document.getElementById("control-prev");
+const controlNext = document.getElementById("control-next");
+const controlReveal = document.getElementById("control-reveal");
+const controlQuestionOpen = document.getElementById("control-question-open");
+const embedModal = document.getElementById("embed-modal");
 
 let activity = null;
 
@@ -70,6 +78,7 @@ async function render() {
   questionKindField.classList.toggle("hidden", isPoll);
   questionKindSelect.value = isPoll ? "poll" : "mcq";
   updateCorrectField();
+  renderPresentationControls();
 
   renderQuestions();
   await loadResults();
@@ -207,6 +216,70 @@ function updateCorrectField() {
   correctField.classList.toggle("hidden", kind === "poll");
 }
 
+function questionIndex() {
+  const total = activity.questions.length;
+  if (!total) return 0;
+  const raw = Number(activity.state?.current_question ?? 0);
+  return Math.min(Math.max(raw, 0), total - 1);
+}
+
+function currentQuestion() {
+  return activity.questions[questionIndex()] || null;
+}
+
+function renderPresentationControls() {
+  const isWordcloud = activity.kind === "wordcloud";
+  presentationControls.classList.toggle("hidden", isWordcloud);
+  if (isWordcloud) return;
+
+  const total = activity.questions.length;
+  const index = questionIndex();
+  const question = currentQuestion();
+  const state = activity.state || {};
+  const isVideo = activity.kind === "video";
+  const isMcq = question?.kind === "mcq";
+  const revealVisible = isMcq && (!isVideo || !!state.question_open);
+
+  controlProgress.textContent = total
+    ? `Question ${index + 1} / ${total}`
+    : "Aucune question";
+  controlQuestion.textContent = question
+    ? question.prompt
+    : "Ajoutez une question pour commencer.";
+  controlPrev.disabled = !total || index === 0;
+  controlNext.disabled = !total || index >= total - 1;
+  controlReveal.classList.toggle("hidden", !revealVisible);
+  controlReveal.disabled = !revealVisible;
+  controlReveal.textContent = state.revealed
+    ? "Cacher la réponse"
+    : "Révéler la réponse";
+  controlQuestionOpen.classList.toggle("hidden", !isVideo);
+  controlQuestionOpen.disabled = !question;
+  controlQuestionOpen.textContent = state.question_open
+    ? "Fermer la question"
+    : "Ouvrir la question";
+}
+
+async function patchPresentationState(patch) {
+  const previous = activity.state;
+  const state = { ...(activity.state || {}), ...patch };
+  activity.state = state;
+  renderPresentationControls();
+
+  try {
+    const updated = await ALF.api(`/activities/${activity.id}`, {
+      method: "PATCH",
+      body: { state },
+    });
+    activity.state = updated.state;
+    renderPresentationControls();
+  } catch (error) {
+    activity.state = previous;
+    renderPresentationControls();
+    ALF.toast(error.message);
+  }
+}
+
 async function deleteQuestion(question) {
   if (!window.confirm("Supprimer cette question ?")) return;
   try {
@@ -228,7 +301,41 @@ async function copyEmbedCode() {
 }
 
 document.getElementById("copy-embed").addEventListener("click", copyEmbedCode);
-document.getElementById("copy-embed-top").addEventListener("click", copyEmbedCode);
+
+document.getElementById("embed-open").addEventListener("click", () => {
+  if (!activity) return;
+  document.getElementById("embed-code").value = embedSnippet();
+  document.getElementById("embed-preview").href = embedUrl();
+  if (!embedModal.open) embedModal.showModal();
+});
+
+document.getElementById("close-embed").addEventListener("click", () => {
+  embedModal.close();
+});
+
+embedModal.addEventListener("click", (event) => {
+  if (event.target === embedModal) embedModal.close();
+});
+
+controlPrev.addEventListener("click", () => {
+  const index = questionIndex();
+  if (index <= 0) return;
+  patchPresentationState({ current_question: index - 1, revealed: false });
+});
+
+controlNext.addEventListener("click", () => {
+  const index = questionIndex();
+  if (index >= activity.questions.length - 1) return;
+  patchPresentationState({ current_question: index + 1, revealed: false });
+});
+
+controlReveal.addEventListener("click", () => {
+  patchPresentationState({ revealed: !activity.state?.revealed });
+});
+
+controlQuestionOpen.addEventListener("click", () => {
+  patchPresentationState({ question_open: !activity.state?.question_open });
+});
 
 document.getElementById("settings-form").addEventListener("submit", async (event) => {
   event.preventDefault();

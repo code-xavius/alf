@@ -91,6 +91,30 @@ p {
   background: var(--bg);
 }
 
+dialog {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font: inherit;
+  margin: auto;
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: 18px;
+  width: min(720px, calc(100% - 32px));
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+dialog h2 {
+  margin-top: 0;
+}
+
+dialog textarea {
+  margin: 10px 0 14px;
+}
+
 .row {
   display: flex;
   align-items: center;
