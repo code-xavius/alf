@@ -31,7 +31,7 @@
           aria-label="Dépôt GitHub"
           title="Dépôt GitHub"
         >
-          <svg class="icon" aria-hidden="true"><use href="#github-icon"></use></svg>
+          <svg class="icon" viewBox="0 0 16 16" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><use href="#github-icon"></use></svg>
         </a>
         <a class="btn" href="login.html">Se connecter</a>
         <a class="btn solid" href="dashboard.html">Créer une activité</a>
@@ -77,6 +77,42 @@
       </section>
 
       <section class="card">
+        <h2>Intégrez alf à vos présentations</h2>
+        <p class="muted">
+          Affichez l'activité directement dans vos diapositives, sans changer de fenêtre.
+        </p>
+        <div class="grid two">
+          <article class="feature">
+            <h3>Reveal.js</h3>
+            <p>Collez ce code dans une section de votre présentation HTML.</p>
+            <pre class="code-block"><code>&lt;iframe
+  src="https://alf-app.netlify.app/present.html?code=VOTRE_CODE&amp;embed=1"
+  width="960"
+  height="540"
+  style="border:0"
+  allowfullscreen
+&gt;&lt;/iframe&gt;</code></pre>
+          </article>
+          <article class="feature">
+            <h3>PowerPoint</h3>
+            <p>
+              PowerPoint n'accepte pas les iframes. Pour afficher l'activité dans une
+              diapositive, utilisez le complément tiers <strong>Web Viewer 2.0</strong>
+              et chargez uniquement cette adresse :
+            </p>
+            <pre class="code-block"><code>https://alf-app.netlify.app/present.html?code=VOTRE_CODE&amp;embed=1</code></pre>
+            <p class="muted small">
+              Sans complément, ouvrez le lien dans un navigateur ou projetez un QR code.
+            </p>
+          </article>
+        </div>
+        <p class="muted small">
+          Le code exact, avec votre code d'activité, est disponible dans la page de chaque
+          activité.
+        </p>
+      </section>
+
+      <section class="card">
         <h2>Prêt en quelques minutes.</h2>
         <ol class="steps">
           <li>Créez votre activité et préparez vos questions.</li>
@@ -93,7 +129,7 @@
             target="_blank"
             rel="noopener"
           >
-            <svg class="icon" aria-hidden="true"><use href="#github-icon"></use></svg>
+            <svg class="icon" viewBox="0 0 16 16" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><use href="#github-icon"></use></svg>
             Voir le code source
           </a>
         </p>
@@ -108,7 +144,7 @@
         target="_blank"
         rel="noopener"
       >
-        <svg class="icon" aria-hidden="true"><use href="#github-icon"></use></svg>
+        <svg class="icon" viewBox="0 0 16 16" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><use href="#github-icon"></use></svg>
         GitHub
       </a>
     </footer>
