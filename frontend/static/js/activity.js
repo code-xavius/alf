@@ -217,7 +217,7 @@ async function deleteQuestion(question) {
   }
 }
 
-document.getElementById("copy-embed").addEventListener("click", async () => {
+async function copyEmbedCode() {
   const code = embedSnippet();
   try {
     await navigator.clipboard.writeText(code);
@@ -225,7 +225,10 @@ document.getElementById("copy-embed").addEventListener("click", async () => {
   } catch {
     window.prompt("Code iframe :", code);
   }
-});
+}
+
+document.getElementById("copy-embed").addEventListener("click", copyEmbedCode);
+document.getElementById("copy-embed-top").addEventListener("click", copyEmbedCode);
 
 document.getElementById("settings-form").addEventListener("submit", async (event) => {
   event.preventDefault();

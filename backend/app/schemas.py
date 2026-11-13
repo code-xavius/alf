@@ -176,6 +176,7 @@ class ResponseCreate(BaseModel):
 
 class ResponseResult(BaseModel):
     recorded: bool
+    updated: bool = False
     is_correct: bool | None = None
 
 

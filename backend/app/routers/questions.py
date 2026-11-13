@@ -146,24 +146,51 @@ async def submit_response(
     if activity.status == "closed":
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Cette activité est terminée.")
 
+    state = activity.state or {}
+    if question.kind == "mcq" and state.get("revealed"):
+        current_index = int(state.get("current_question", 0) or 0)
+        current_question = await db.scalar(
+            select(Question)
+            .where(Question.activity_id == activity.id)
+            .order_by(Question.position)
+            .offset(current_index)
+            .limit(1)
+        )
+        if current_question is not None and current_question.id == question.id:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "Les réponses sont verrouillées.",
+            )
+
     await ensure_participant_active(db, activity.id, payload.participant_id)
 
     options = question.options or []
     if payload.value < 0 or payload.value >= len(options):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Réponse hors des options.")
 
+    is_correct = None
+    if question.kind == "mcq" and question.correct_index is not None:
+        is_correct = question.correct_index == payload.value
+
     existing = await db.scalar(
-        select(Response.id).where(
+        select(Response).where(
             Response.question_id == question_id,
             Response.participant_id == payload.participant_id,
         )
     )
     if existing is not None:
-        return ResponseResult(recorded=False)
-
-    is_correct = None
-    if question.kind == "mcq" and question.correct_index is not None:
-        is_correct = question.correct_index == payload.value
+        existing.value = payload.value
+        existing.is_correct = is_correct
+        await db.commit()
+        await manager.broadcast(
+            activity.code,
+            {
+                "type": "response_added",
+                "activity_id": activity.id,
+                "question_id": question_id,
+            },
+        )
+        return ResponseResult(recorded=True, updated=True, is_correct=is_correct)
 
     response = Response(
         question_id=question_id,

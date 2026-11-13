@@ -118,6 +118,7 @@ function renderQuestion() {
   const index = questionIndex();
   const question = activity.questions[index];
   const answered = answers[question.id];
+  const locked = question.kind === "mcq" && state.revealed;
 
   content.append(
     ALF.el(
@@ -129,7 +130,15 @@ function renderQuestion() {
   content.append(ALF.el("h2", {}, question.prompt));
 
   if (answered) {
-    content.append(ALF.el("p", { class: "muted" }, "Réponse enregistrée."));
+    content.append(
+      ALF.el(
+        "p",
+        { class: "muted" },
+        locked
+          ? "Réponse enregistrée."
+          : "Réponse enregistrée. Vous pouvez encore la modifier.",
+      ),
+    );
   }
 
   const choices = ALF.el("div", {});
@@ -147,7 +156,7 @@ function renderQuestion() {
         {
           class: `btn choice${chosen ? " solid" : ""}${correct ? " correct-choice" : ""}`,
           type: "button",
-          disabled: answered ? "disabled" : undefined,
+          disabled: locked ? "disabled" : undefined,
           onclick: () => submitAnswer(question, optionIndex),
         },
         option,
@@ -176,7 +185,7 @@ function renderQuestion() {
 }
 
 async function submitAnswer(question, value) {
-  if (answers[question.id]) return;
+  const previous = answers[question.id];
   try {
     const result = await ALF.api(`/questions/${question.id}/responses`, {
       method: "POST",
@@ -187,9 +196,8 @@ async function submitAnswer(question, value) {
     if (result.recorded) {
       answers[question.id] = { value, is_correct: result.is_correct };
       ALF.setAnswers(code, answers);
+      if (previous && previous.value !== value) ALF.toast("Réponse modifiée.");
       await render();
-    } else {
-      ALF.toast("Vous avez déjà répondu.");
     }
   } catch (error) {
     if (error.message.includes("exclu")) {

@@ -85,15 +85,63 @@ async def test_poll_flow() -> None:
         assert answer.status_code == 200, answer.text
         assert answer.json()["recorded"] is True
 
-        duplicate = await http.post(
+        changed = await http.post(
             f"/api/questions/{question['id']}/responses",
             json={"participant_id": participant["id"], "value": 0},
         )
-        assert duplicate.json()["recorded"] is False
+        assert changed.json()["recorded"] is True
+        assert changed.json()["updated"] is True
+
+        results = (await http.get(f"/api/activities/{activity['id']}/results")).json()
+        assert results["questions"][0]["counts"] == [1, 0]
+        assert results["questions"][0]["total"] == 1
+
+
+async def test_quiz_response_can_be_changed() -> None:
+    async with await client() as http:
+        activity = await create_activity(http, "quiz", "Quiz modifiable")
+        question = (
+            await http.post(
+                f"/api/activities/{activity['id']}/questions",
+                json={
+                    "prompt": "Capitale de la France ?",
+                    "kind": "mcq",
+                    "options": ["Lyon", "Paris"],
+                    "correct_index": 1,
+                },
+            )
+        ).json()
+
+        participant = await join(http, activity["code"], "Alice")
+
+        first = await http.post(
+            f"/api/questions/{question['id']}/responses",
+            json={"participant_id": participant["id"], "value": 0},
+        )
+        assert first.json()["recorded"] is True
+        assert first.json()["is_correct"] is False
+
+        changed = await http.post(
+            f"/api/questions/{question['id']}/responses",
+            json={"participant_id": participant["id"], "value": 1},
+        )
+        assert changed.json()["recorded"] is True
+        assert changed.json()["updated"] is True
+        assert changed.json()["is_correct"] is True
 
         results = (await http.get(f"/api/activities/{activity['id']}/results")).json()
         assert results["questions"][0]["counts"] == [0, 1]
         assert results["questions"][0]["total"] == 1
+
+        await http.patch(
+            f"/api/activities/{activity['id']}",
+            json={"state": {"current_question": 0, "revealed": True}},
+        )
+        locked = await http.post(
+            f"/api/questions/{question['id']}/responses",
+            json={"participant_id": participant["id"], "value": 0},
+        )
+        assert locked.status_code == 400
 
 
 async def test_public_activity_hides_answers_until_reveal() -> None:
