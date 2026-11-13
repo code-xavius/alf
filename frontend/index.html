@@ -6,16 +6,35 @@
     <title>alf — animer vos cours et formations</title>
     <meta
       name="description"
-      content="Nuages de mots, votes en direct, quiz et quiz vidéo YouTube pour animer vos cours et formations."
+      content="Nuages de mots, votes en direct et quiz pour faire participer vos élèves depuis leur téléphone, sans installer d'application."
     />
     <link rel="stylesheet" href="static/css/base.css" />
   </head>
   <body>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol id="github-icon" viewBox="0 0 16 16">
+        <path
+          fill="currentColor"
+          d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"
+        />
+      </symbol>
+    </svg>
+
     <header class="topbar">
       <a class="brand" href="index.html">[alf]</a>
       <nav>
+        <a
+          class="btn icon-link"
+          href="https://github.com/code-xavius/alf"
+          target="_blank"
+          rel="noopener"
+          aria-label="Dépôt GitHub"
+          title="Dépôt GitHub"
+        >
+          <svg class="icon" aria-hidden="true"><use href="#github-icon"></use></svg>
+        </a>
         <a class="btn" href="login.html">Se connecter</a>
-        <a class="btn solid" href="dashboard.html">Tableau de bord</a>
+        <a class="btn solid" href="dashboard.html">Créer une activité</a>
       </nav>
     </header>
 
@@ -23,8 +42,8 @@
       <section class="hero">
         <h1>Animez vos cours.<br />Faites participer tout le monde.</h1>
         <p class="lead">
-          Nuages de mots, votes en direct, quiz et quiz vidéo YouTube. Les participants
-          rejoignent avec un QR code depuis leur téléphone, sans installer d'application.
+          Posez une question, projetez un QR code et laissez vos élèves répondre depuis
+          leur téléphone. Aucun compte ni application à installer pour eux.
         </p>
         <div class="row">
           <a class="btn solid" href="login.html">Créer une activité</a>
@@ -43,30 +62,55 @@
         </article>
         <article class="card feature">
           <h3>Quiz</h3>
-          <p>Questions à choix multiples, réponses en temps réel, bonne réponse révélée quand vous décidez.</p>
+          <p>
+            Questions à choix multiple ou simples choix. Les élèves peuvent corriger
+            leur réponse ; vous révélez la bonne réponse quand vous le décidez.
+          </p>
         </article>
         <article class="card feature">
-          <h3>Quiz vidéo / audio</h3>
-          <p>Utilisez une vidéo YouTube et posez des questions à des moments précis.</p>
+          <h3>Simple à lancer</h3>
+          <p>
+            Un code et un QR code suffisent. Vos élèves répondent depuis leur téléphone,
+            sans installation.
+          </p>
         </article>
       </section>
 
       <section class="card">
-        <h2>Simple, léger, open source.</h2>
-        <p>
-          alf est un outil open source sous licence MIT. Le backend est en Python
-          (FastAPI), le frontend est en HTML/CSS/JS sans build. Il peut tourner sur une
-          infrastructure très légère.
-        </p>
+        <h2>Prêt en quelques minutes.</h2>
+        <ol class="steps">
+          <li>Créez votre activité et préparez vos questions.</li>
+          <li>Projetez le QR code ou partagez le lien.</li>
+          <li>Suivez les réponses et les résultats en direct.</li>
+        </ol>
         <p class="muted small">
-          Comptes email / mot de passe via Supabase · Backend Render · Base Supabase · Frontend Netlify
+          alf est un outil libre et gratuit. Le code source est disponible sur GitHub.
+        </p>
+        <p class="row">
+          <a
+            class="btn with-icon"
+            href="https://github.com/code-xavius/alf"
+            target="_blank"
+            rel="noopener"
+          >
+            <svg class="icon" aria-hidden="true"><use href="#github-icon"></use></svg>
+            Voir le code source
+          </a>
         </p>
       </section>
     </main>
 
     <footer class="footer">
-      <span>[alf] — MIT</span>
-      <span class="muted">Python · FastAPI · Supabase · Render · Netlify</span>
+      <span>[alf] — pour les enseignants et formateurs</span>
+      <a
+        class="footer-link"
+        href="https://github.com/code-xavius/alf"
+        target="_blank"
+        rel="noopener"
+      >
+        <svg class="icon" aria-hidden="true"><use href="#github-icon"></use></svg>
+        GitHub
+      </a>
     </footer>
 
     <script src="static/js/config.js"></script>
