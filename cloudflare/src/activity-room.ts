@@ -115,6 +115,8 @@ export class ActivityRoom extends DurableObject<Env> {
   }
 
   async alarm(): Promise<void> {
+    this.broadcastSnapshot();
+
     let flushFailed = false;
     try {
       await this.flushWords();
@@ -123,7 +125,6 @@ export class ActivityRoom extends DurableObject<Env> {
       flushFailed = true;
     }
 
-    this.broadcastSnapshot();
     if (this.pendingCount() > 0) {
       await this.ctx.storage.setAlarm(Date.now() + (flushFailed ? 2000 : 1000));
     }
@@ -240,6 +241,7 @@ export class ActivityRoom extends DurableObject<Env> {
           "content-type": "application/json",
           "x-alf-internal-token": this.env.ALF_INTERNAL_TOKEN,
         },
+        signal: AbortSignal.timeout(5000),
         body: JSON.stringify({
           words: rows.map((row) => ({
             id: row.id,
