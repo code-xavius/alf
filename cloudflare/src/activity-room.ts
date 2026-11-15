@@ -272,11 +272,14 @@ export class ActivityRoom extends DurableObject<Env> {
   }
 
   private markSynced(rows: WordRow[]): void {
-    const placeholders = rows.map(() => "?").join(",");
-    this.sql.exec(
-      `UPDATE words SET synced = 1 WHERE id IN (${placeholders})`,
-      ...rows.map((row) => row.id),
-    );
+    for (let start = 0; start < rows.length; start += 100) {
+      const chunk = rows.slice(start, start + 100);
+      const placeholders = chunk.map(() => "?").join(",");
+      this.sql.exec(
+        `UPDATE words SET synced = 1 WHERE id IN (${placeholders})`,
+        ...chunk.map((row) => row.id),
+      );
+    }
   }
 
   private pendingCount(): number {
