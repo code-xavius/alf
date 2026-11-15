@@ -82,11 +82,21 @@ function renderWordcloud() {
     const text = input.value.trim();
     if (!text) return;
     try {
-      await ALF.api(`/activities/${activity.id}/words`, {
-        method: "POST",
-        auth: false,
-        body: { text, participant_id: participant.id },
-      });
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(
+          JSON.stringify({
+            type: "word",
+            text,
+            participant_id: participant.id,
+          }),
+        );
+      } else {
+        await ALF.api(`/activities/${activity.id}/words`, {
+          method: "POST",
+          auth: false,
+          body: { text, participant_id: participant.id },
+        });
+      }
       input.value = "";
     } catch (error) {
       if (error.message.includes("exclu")) {
@@ -261,6 +271,10 @@ async function handleMessage(message) {
       activity = message.activity;
       await render();
       break;
+    case "word_snapshot":
+      occurrences = message.occurrences || {};
+      updateWordList();
+      break;
     case "word_added":
       if (occurrences) {
         occurrences[message.text] = (occurrences[message.text] || 0) + 1;
@@ -291,12 +305,16 @@ async function handleMessage(message) {
   }
 }
 
-function connectSocket() {
+async function connectSocket() {
   if (stopped) return;
-  socket = ALF.connect(code, handleMessage);
-  socket.onclose = () => {
+  try {
+    socket = await ALF.connect(code, handleMessage);
+    socket.onclose = () => {
+      if (!stopped) reconnectTimer = window.setTimeout(connectSocket, 2000);
+    };
+  } catch {
     if (!stopped) reconnectTimer = window.setTimeout(connectSocket, 2000);
-  };
+  }
 }
 
 document.getElementById("join-form").addEventListener("submit", async (event) => {

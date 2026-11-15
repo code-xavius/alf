@@ -161,8 +161,17 @@ const ALF = (() => {
     }
   }
 
-  function connect(code, onMessage) {
-    const socket = new WebSocket(`${WS_BASE}/ws/${encodeURIComponent(code.toUpperCase())}`);
+  async function connect(code, onMessage) {
+    let settings = null;
+    try {
+      settings = await getConfig();
+    } catch {
+      /* fall back to the backend WebSocket */
+    }
+    const base = String(settings?.realtime_url || WS_BASE)
+      .replace(/\/$/, "")
+      .replace(/^http/, "ws");
+    const socket = new WebSocket(`${base}/ws/${encodeURIComponent(code.toUpperCase())}`);
     socket.onmessage = (event) => {
       try {
         onMessage(JSON.parse(event.data));

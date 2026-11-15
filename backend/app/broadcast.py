@@ -2,7 +2,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import Activity, Participant
-from .realtime import manager
+from .realtime_publisher import publish
 from .serializers import public_activity
 
 
@@ -15,7 +15,7 @@ async def participant_count(db: AsyncSession, activity_id: str) -> int:
 
 async def broadcast_activity(db: AsyncSession, activity: Activity) -> None:
     count = await participant_count(db, activity.id)
-    await manager.broadcast(
+    await publish(
         activity.code,
         {
             "type": "activity_updated",

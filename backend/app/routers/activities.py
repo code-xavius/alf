@@ -16,7 +16,7 @@ from ..deps import (
     load_activity_detail,
 )
 from ..models import Activity, Participant, utcnow
-from ..realtime import manager
+from ..realtime_publisher import publish
 from ..schemas import (
     ActivityCreate,
     ActivityRead,
@@ -190,7 +190,7 @@ async def join_activity(
     await db.commit()
     await db.refresh(participant)
 
-    await manager.broadcast(
+    await publish(
         activity.code,
         {
             "type": "participant_joined",
@@ -262,7 +262,7 @@ async def ban_participant(
     await db.commit()
     await db.refresh(participant)
 
-    await manager.broadcast(
+    await publish(
         activity.code,
         {
             "type": event_type,
@@ -332,4 +332,4 @@ async def delete_activity(
     await db.delete(activity)
     await db.commit()
 
-    await manager.broadcast(code, {"type": "activity_deleted"})
+    await publish(code, {"type": "activity_deleted"})

@@ -22,6 +22,11 @@ async def lifespan(app: FastAPI):
             "DEV_MODE is enabled: authentication is bypassed. "
             "Set DEV_MODE=false before deploying."
         )
+    if settings.realtime_url and not settings.internal_token:
+        logger.warning(
+            "REALTIME_URL is set but INTERNAL_TOKEN is missing: "
+            "Cloudflare publishing and word batching will fail."
+        )
     yield
 
 

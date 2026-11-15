@@ -19,6 +19,7 @@ async def app_config() -> AppConfigOut:
         dev_mode=settings.dev_mode,
         supabase_url=settings.supabase_url,
         supabase_anon_key=settings.supabase_anon_key,
+        realtime_url=settings.realtime_url,
     )
 
 

@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     supabase_anon_key: str | None = None
     supabase_jwt_secret: str | None = None
 
+    # Cloudflare Worker / Durable Object realtime hub. Leave empty for the
+    # legacy in-memory WebSocket fallback.
+    realtime_url: str | None = None
+    internal_token: str | None = None
+
     activity_code_length: int = 6
 
     @property

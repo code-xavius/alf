@@ -21,5 +21,9 @@ services:
         value: https://alf-app.netlify.app,https://alf-501.netlify.app
       - key: FRONTEND_DIR
         value: ""
+      - key: REALTIME_URL
+        value: https://alf-realtime.alf-realtime.workers.dev
+      - key: INTERNAL_TOKEN
+        sync: false
       - key: DATABASE_URL
         sync: false

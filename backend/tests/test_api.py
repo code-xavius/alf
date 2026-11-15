@@ -1,5 +1,6 @@
 from httpx import ASGITransport, AsyncClient
 
+from app.config import settings
 from app.main import app
 
 
@@ -58,6 +59,42 @@ async def test_wordcloud_flow() -> None:
 
         results = await http.get(f"/api/activities/{activity['id']}/results")
         assert results.status_code == 200, results.text
+        assert results.json()["words"] == [{"text": "Python", "count": 1}]
+
+
+async def test_internal_word_batch_requires_token() -> None:
+    async with await client() as http:
+        activity = await create_activity(http)
+        response = await http.post(
+            f"/api/internal/activities/{activity['code']}/words/batch",
+            json={"words": [{"text": "Python"}]},
+        )
+        assert response.status_code == 401
+
+
+async def test_internal_word_batch_inserts_and_dedupes(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "internal_token", "test-secret")
+
+    async with await client() as http:
+        activity = await create_activity(http)
+        participant = await join(http, activity["code"], "Alice")
+        word = {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "text": "Python",
+            "participant_id": participant["id"],
+        }
+        url = f"/api/internal/activities/{activity['code']}/words/batch"
+        headers = {"X-ALF-Internal-Token": "test-secret"}
+
+        first = await http.post(url, json={"words": [word, word]}, headers=headers)
+        assert first.status_code == 200, first.text
+        assert first.json() == {"inserted": 1, "skipped": 1}
+
+        second = await http.post(url, json={"words": [word]}, headers=headers)
+        assert second.status_code == 200, second.text
+        assert second.json() == {"inserted": 0, "skipped": 1}
+
+        results = await http.get(f"/api/activities/{activity['id']}/results")
         assert results.json()["words"] == [{"text": "Python", "count": 1}]
 
 

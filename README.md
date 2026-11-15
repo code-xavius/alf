@@ -27,6 +27,7 @@ données.
 ```text
 alf-v2/
 ├── backend/          API FastAPI, modèles SQLAlchemy, tests
+├── cloudflare/       Worker + Durable Object pour le temps réel
 ├── frontend/         Pages et assets statiques (aucun build)
 ├── scripts/          Outils de déploiement
 └── .github/          Intégration continue
@@ -34,8 +35,11 @@ alf-v2/
 
 - Backend : FastAPI + SQLAlchemy 2 (async), SQLite en local, PostgreSQL
   (Supabase) en production.
-- Temps réel : WebSocket natif à `/ws/{code}`. Le serveur garde les connexions
-  en mémoire, ce qui suppose une instance unique.
+- Temps réel : Worker Cloudflare avec un Durable Object par activité. Le DO
+  garde les WebSockets, agrège les mots et diffuse des snapshots. Les mots sont
+  ensuite envoyés au backend par lots pour la persistance Supabase.
+- Fallback local : si `REALTIME_URL` est vide, le backend utilise son ancien
+  gestionnaire WebSocket en mémoire.
 - Authentification : Supabase Auth (email / mot de passe). Le frontend obtient
   un jeton et le backend le vérifie.
 
@@ -64,6 +68,18 @@ Ouvrez <http://localhost:5500>. Créez une activité depuis le tableau de bord,
 ouvrez l'écran de présentation, puis faites rejoindre les participants avec le
 code ou le QR code affiché.
 
+Pour utiliser le Worker Cloudflare en local, dans un troisième terminal :
+
+```bash
+cd cloudflare
+npm install
+cp .dev.vars.example .dev.vars
+npx wrangler dev
+```
+
+Le backend doit alors avoir `REALTIME_URL=http://127.0.0.1:8787` et le même
+`INTERNAL_TOKEN` que `cloudflare/.dev.vars`.
+
 ## Configuration
 
 Copiez `.env.example` vers `backend/.env` et ajustez les valeurs.
@@ -78,6 +94,8 @@ Copiez `.env.example` vers `backend/.env` et ajustez les valeurs.
 | `SUPABASE_JWT_SECRET` | — | Secret de signature des jetons ; sinon JWKS est utilisé |
 | `CORS_ORIGINS` | origines locales | Origines autorisées, séparées par des virgules |
 | `FRONTEND_DIR` | — | Sert le frontend depuis le backend si défini |
+| `REALTIME_URL` | — | Origine HTTP du Worker Cloudflare, vide pour le fallback local |
+| `INTERNAL_TOKEN` | — | Secret partagé avec le Worker pour le batch des mots |
 | `ACTIVITY_CODE_LENGTH` | `6` | Longueur des codes d'activité |
 
 ## Supabase
@@ -105,6 +123,22 @@ frontend. Seuls `SUPABASE_URL` et `SUPABASE_ANON_KEY` sont exposés.
 - Renseignez les variables d'environnement ci-dessus, avec `DEV_MODE=false` et
   `FRONTEND_DIR` vide si le frontend est servi par Netlify.
 - Ajoutez l'URL Netlify à `CORS_ORIGINS`.
+- Renseignez `INTERNAL_TOKEN` avec le même secret que le Worker.
+
+### Temps réel sur Cloudflare
+
+- Le Worker `alf-realtime` et son Durable Object sont définis dans `cloudflare/`.
+- `REALTIME_URL` vaut `https://alf-realtime.alf-realtime.workers.dev`.
+- Le secret du Worker doit être identique à `INTERNAL_TOKEN` sur Render :
+
+```bash
+cd cloudflare
+npx wrangler secret put ALF_INTERNAL_TOKEN
+npx wrangler deploy
+```
+
+Le secret n'est jamais stocké dans le dépôt. Les origines navigateur autorisées
+sont configurées dans `cloudflare/wrangler.jsonc` via `ALLOWED_ORIGINS`.
 
 ### Frontend sur Netlify
 
@@ -128,6 +162,10 @@ données SQLite sont conservées dans un volume.
 cd backend
 ruff check .
 pytest -q
+
+cd ../cloudflare
+npm run typecheck
+npx wrangler deploy --dry-run
 ```
 
 ## Licence

@@ -13,7 +13,7 @@ from ..broadcast import broadcast_activity
 from ..db import get_db
 from ..deps import ensure_participant_active, get_owned_activity, load_activity_by_code
 from ..models import Activity, Question, Response, Word
-from ..realtime import manager
+from ..realtime_publisher import publish
 from ..schemas import (
     ActivityResults,
     QuestionCreate,
@@ -182,7 +182,7 @@ async def submit_response(
         existing.value = payload.value
         existing.is_correct = is_correct
         await db.commit()
-        await manager.broadcast(
+        await publish(
             activity.code,
             {
                 "type": "response_added",
@@ -201,7 +201,7 @@ async def submit_response(
     db.add(response)
     await db.commit()
 
-    await manager.broadcast(
+    await publish(
         activity.code,
         {
             "type": "response_added",

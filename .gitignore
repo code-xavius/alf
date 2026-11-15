@@ -19,10 +19,12 @@ htmlcov/
 *.sqlite
 *.sqlite3
 
-# Node / Netlify
+# Node / Netlify / Cloudflare
 node_modules/
 .netlify/
 dist/
+.wrangler/
+cloudflare/.dev.vars
 
 # Editors and OS
 .vscode/

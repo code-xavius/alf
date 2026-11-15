@@ -447,6 +447,10 @@ async function handleMessage(message) {
       renderStage();
       break;
     }
+    case "word_snapshot":
+      occurrences = message.occurrences || {};
+      scheduleRender();
+      break;
     case "word_added":
       if (occurrences) {
         occurrences[message.text] = (occurrences[message.text] || 0) + 1;
@@ -551,12 +555,16 @@ function participantsOpen() {
   return !document.getElementById("participants-panel").classList.contains("hidden");
 }
 
-function connectSocket() {
+async function connectSocket() {
   if (stopped || !activity) return;
-  socket = ALF.connect(activity.code, handleMessage);
-  socket.onclose = () => {
+  try {
+    socket = await ALF.connect(activity.code, handleMessage);
+    socket.onclose = () => {
+      if (!stopped) reconnectTimer = window.setTimeout(connectSocket, 2000);
+    };
+  } catch {
     if (!stopped) reconnectTimer = window.setTimeout(connectSocket, 2000);
-  };
+  }
 }
 
 function joinUrl() {

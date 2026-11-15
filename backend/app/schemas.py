@@ -17,6 +17,7 @@ class AppConfigOut(BaseModel):
     dev_mode: bool
     supabase_url: str | None
     supabase_anon_key: str | None
+    realtime_url: str | None = None
 
 
 class MeOut(BaseModel):
@@ -167,6 +168,22 @@ class WordRead(ORMModel):
     text: str
     participant_id: str | None
     created_at: datetime
+
+
+class WordBatchItem(BaseModel):
+    id: str | None = Field(default=None, max_length=36)
+    text: str = Field(min_length=1, max_length=80)
+    participant_id: str | None = Field(default=None, max_length=36)
+    created_at: datetime | None = None
+
+
+class WordBatchCreate(BaseModel):
+    words: list[WordBatchItem] = Field(min_length=1, max_length=500)
+
+
+class WordBatchResult(BaseModel):
+    inserted: int
+    skipped: int
 
 
 class ResponseCreate(BaseModel):
