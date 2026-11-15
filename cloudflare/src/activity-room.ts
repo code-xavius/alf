@@ -115,17 +115,17 @@ export class ActivityRoom extends DurableObject<Env> {
   }
 
   async alarm(): Promise<void> {
+    let flushFailed = false;
     try {
       await this.flushWords();
     } catch (error) {
       console.error("word batch flush failed", error);
-      await this.ctx.storage.setAlarm(Date.now() + 2000);
-      return;
+      flushFailed = true;
     }
 
     this.broadcastSnapshot();
     if (this.pendingCount() > 0) {
-      await this.ctx.storage.setAlarm(Date.now() + 1000);
+      await this.ctx.storage.setAlarm(Date.now() + (flushFailed ? 2000 : 1000));
     }
   }
 
