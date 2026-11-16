@@ -85,19 +85,19 @@ body.embed-mode .controls {
   width: 100%;
 }
 
-#qrcode .qr-frame {
+.qr-frame {
   background: #fff;
   padding: 6px;
   position: relative;
 }
 
-#qrcode .qr-frame > svg {
+.qr-frame > svg {
   display: block;
   height: auto;
   width: 100%;
 }
 
-#qrcode .qr-cat {
+.qr-cat {
   align-items: center;
   aspect-ratio: 1;
   background: #fff;
@@ -115,10 +115,34 @@ body.embed-mode .controls {
   width: 22%;
 }
 
-#qrcode .qr-cat svg {
+.qr-cat svg {
   display: block;
   height: 100%;
   width: 100%;
+}
+
+.embed-qr {
+  display: none;
+}
+
+body.embed-mode .embed-qr {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  display: block;
+  padding: 8px;
+  position: fixed;
+  right: 12px;
+  top: 12px;
+  width: 152px;
+  z-index: 20;
+}
+
+#embed-qrcode {
+  width: 100%;
+}
+
+#embed-qrcode .qr-frame {
+  padding: 4px;
 }
 
 .big-question {

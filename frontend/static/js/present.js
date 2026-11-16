@@ -573,10 +573,8 @@ function joinUrl() {
   return url.toString();
 }
 
-function renderQr() {
-  const url = joinUrl();
-  document.getElementById("join-url").textContent = url;
-  const target = document.getElementById("qrcode");
+function renderQrInto(target, url) {
+  if (!target) return;
   ALF.clear(target);
 
   if (typeof qrcode !== "function") {
@@ -594,6 +592,13 @@ function renderQr() {
     ALF.el("span", { class: "qr-cat", "aria-hidden": "true", html: ALF.catFaceSvg }),
   );
   target.append(frame);
+}
+
+function renderQr() {
+  const url = joinUrl();
+  document.getElementById("join-url").textContent = url;
+  renderQrInto(document.getElementById("qrcode"), url);
+  if (embedMode) renderQrInto(document.getElementById("embed-qrcode"), url);
 }
 
 document.getElementById("participants-toggle").addEventListener("click", async () => {
@@ -631,7 +636,7 @@ document.getElementById("quit").addEventListener("click", () => {
       await refreshResults(false);
     }
 
-    if (!embedMode) renderQr();
+    renderQr();
     renderStage();
     connectSocket();
 
