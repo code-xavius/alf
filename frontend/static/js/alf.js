@@ -10,6 +10,37 @@ const ALF = (() => {
   const DEVICE_KEY = "alf_device_id";
   const PARTICIPANT_PREFIX = "alf_participant_";
   const ANSWERS_PREFIX = "alf_answers_";
+  const THEME_KEY = "alf_theme";
+
+  const CAT_FACE_SVG = `
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <path fill="currentColor" d="M32 8.5c-4 0-7.8 1.1-11 3.1L15.7 4l1.2 11.4A22.8 22.8 0 0 0 9 32.3C9 45 19.7 55.3 32 55.3S55 45 55 32.3c0-6.4-2.7-12.2-7.1-16.3L49.3 4l-6.1 7.6A22.8 22.8 0 0 0 32 8.5Z"/>
+      <circle cx="24" cy="31" r="2.8" fill="#fff"/>
+      <circle cx="40" cy="31" r="2.8" fill="#fff"/>
+      <path d="M29 39h6l-3 4.2Z" fill="#fff"/>
+      <path d="M13 34H5M13 39l-8 2M51 34h8M51 39l8 2" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="1.8"/>
+    </svg>`;
+
+  const CAT_RUNNER_SVG = `
+    <svg viewBox="0 0 80 48" aria-hidden="true" focusable="false">
+      <path fill="currentColor" d="M18 20c-7 0-12 4-15 10 4-2 8-2 11 0 2-4 6-6 11-6Z"/>
+      <ellipse cx="38" cy="28" rx="22" ry="11" fill="currentColor"/>
+      <circle cx="61" cy="21" r="10" fill="currentColor"/>
+      <path fill="currentColor" d="m53 14-2-9 8 5Zm10-3 5-7 2 9Z"/>
+      <path fill="currentColor" d="m49 32-2 12 8-9Zm-15 3-2 11 7-9Zm-15-3-5 11 10-8Z"/>
+      <circle cx="65" cy="19" r="1.6" fill="#fff"/>
+    </svg>`;
+
+  const SUN_ICON = `
+    <svg class="icon theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+    </svg>`;
+
+  const MOON_ICON = `
+    <svg class="icon theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>
+    </svg>`;
 
   let appConfig = null;
   let supabase = null;
@@ -275,6 +306,83 @@ const ALF = (() => {
     target.classList.remove("hidden");
   }
 
+  function currentTheme() {
+    return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+  }
+
+  function updateThemeButtons() {
+    const dark = currentTheme() === "dark";
+    document.querySelectorAll(".theme-toggle").forEach((button) => {
+      button.setAttribute(
+        "aria-label",
+        dark ? "Activer le mode clair" : "Activer le mode sombre",
+      );
+      button.setAttribute("aria-pressed", String(dark));
+      button.title = dark ? "Mode clair" : "Mode sombre";
+    });
+  }
+
+  function setTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {}
+    updateThemeButtons();
+  }
+
+  function setupThemeToggle() {
+    const host =
+      document.querySelector(".topbar nav") ||
+      document.querySelector(".topbar .row") ||
+      document.querySelector(".topbar");
+    if (!host || host.querySelector(".theme-toggle")) return;
+
+    const button = el("button", {
+      class: "btn icon-link theme-toggle",
+      type: "button",
+      "aria-label": "Activer le mode sombre",
+      title: "Mode sombre",
+    });
+    button.innerHTML = `${SUN_ICON}${MOON_ICON}`;
+    button.addEventListener("click", () => {
+      setTheme(currentTheme() === "dark" ? "light" : "dark");
+    });
+    host.append(button);
+    updateThemeButtons();
+  }
+
+  function setupCatRunner() {
+    if (document.body.classList.contains("embed-mode")) return;
+    if (document.querySelector(".cat-runner")) return;
+
+    const runner = el("div", { class: "cat-runner", "aria-hidden": "true" });
+    runner.append(el("div", { class: "cat-runner-cat", html: CAT_RUNNER_SVG }));
+    document.body.append(runner);
+    document.body.classList.add("has-cat-runner");
+  }
+
+  function onReady(callback) {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", callback, { once: true });
+    } else {
+      callback();
+    }
+  }
+
+  onReady(() => {
+    setupThemeToggle();
+    setupCatRunner();
+  });
+
+  window.addEventListener("storage", (event) => {
+    if (event.key !== THEME_KEY) return;
+    const theme = event.newValue === "dark" ? "dark" : "light";
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+    updateThemeButtons();
+  });
+
   return {
     API_BASE,
     WS_BASE,
@@ -298,5 +406,6 @@ const ALF = (() => {
     escapeHtml,
     formatDate,
     showError,
+    catFaceSvg: CAT_FACE_SVG,
   };
 })();

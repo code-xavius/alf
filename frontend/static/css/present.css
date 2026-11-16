@@ -85,9 +85,39 @@ body.embed-mode .controls {
   width: 100%;
 }
 
-#qrcode svg {
+#qrcode .qr-frame {
+  background: #fff;
+  padding: 6px;
+  position: relative;
+}
+
+#qrcode .qr-frame > svg {
   display: block;
   height: auto;
+  width: 100%;
+}
+
+#qrcode .qr-cat {
+  align-items: center;
+  aspect-ratio: 1;
+  background: #fff;
+  border-radius: 50%;
+  box-sizing: border-box;
+  color: #000;
+  display: flex;
+  justify-content: center;
+  left: 50%;
+  padding: 3%;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 22%;
+}
+
+#qrcode .qr-cat svg {
+  display: block;
+  height: 100%;
   width: 100%;
 }
 

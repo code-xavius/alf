@@ -584,10 +584,16 @@ function renderQr() {
     return;
   }
 
-  const qr = qrcode(0, "M");
+  const qr = qrcode(0, "H");
   qr.addData(url);
   qr.make();
-  target.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 1, scalable: true });
+
+  const frame = ALF.el("div", { class: "qr-frame" });
+  frame.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 1, scalable: true });
+  frame.append(
+    ALF.el("span", { class: "qr-cat", "aria-hidden": "true", html: ALF.catFaceSvg }),
+  );
+  target.append(frame);
 }
 
 document.getElementById("participants-toggle").addEventListener("click", async () => {

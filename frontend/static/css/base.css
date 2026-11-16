@@ -1,10 +1,20 @@
 :root {
+  color-scheme: light;
   --bg: #ffffff;
   --fg: #000000;
   --muted: #555555;
   --soft: #f2f2f2;
   --line: #000000;
   --mono: "Courier New", Courier, monospace;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b0b0b;
+  --fg: #f5f5f5;
+  --muted: #a8a8a8;
+  --soft: #1b1b1b;
+  --line: #e6e6e6;
 }
 
 * {
@@ -308,6 +318,18 @@ label {
   vertical-align: middle;
 }
 
+.theme-icon-sun {
+  display: none;
+}
+
+:root[data-theme="dark"] .theme-icon-sun {
+  display: inline-block;
+}
+
+:root[data-theme="dark"] .theme-icon-moon {
+  display: none;
+}
+
 .with-icon {
   align-items: center;
   display: inline-flex;
@@ -451,5 +473,80 @@ td {
 
   .container {
     padding: 18px 14px;
+  }
+}
+
+body.has-cat-runner {
+  padding-bottom: 42px;
+}
+
+body.embed-mode.has-cat-runner {
+  padding-bottom: 0;
+}
+
+.cat-runner {
+  bottom: 0;
+  height: 42px;
+  left: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: fixed;
+  right: 0;
+  z-index: 40;
+}
+
+.embed-mode .cat-runner {
+  display: none;
+}
+
+.cat-runner-cat {
+  animation: cat-run 16s linear infinite;
+  bottom: 2px;
+  color: #000;
+  height: 38px;
+  left: 0;
+  position: absolute;
+  width: 64px;
+}
+
+.cat-runner-cat svg {
+  animation: cat-bob 0.32s ease-in-out infinite alternate;
+  display: block;
+  height: 100%;
+  paint-order: stroke fill;
+  stroke: #ffffff;
+  stroke-width: 1.4;
+  width: 100%;
+}
+
+@keyframes cat-run {
+  from {
+    transform: translateX(-80px);
+  }
+
+  to {
+    transform: translateX(calc(100vw + 80px));
+  }
+}
+
+@keyframes cat-bob {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cat-runner-cat {
+    animation: none;
+    left: 12px;
+    transform: none;
+  }
+
+  .cat-runner-cat svg {
+    animation: none;
   }
 }
