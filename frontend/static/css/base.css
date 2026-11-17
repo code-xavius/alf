@@ -192,7 +192,9 @@ textarea {
 input:focus,
 select:focus,
 textarea:focus,
-.btn:focus-visible {
+.btn:focus-visible,
+.participants-list:focus-visible,
+.switch:focus-visible {
   outline: 2px solid var(--fg);
   outline-offset: 1px;
 }
@@ -205,6 +207,49 @@ label {
 
 .field {
   margin-bottom: 14px;
+}
+
+.status-control {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.switch {
+  appearance: none;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  flex: none;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  width: 44px;
+}
+
+.switch::before {
+  background: var(--fg);
+  content: "";
+  height: 16px;
+  left: 3px;
+  position: absolute;
+  top: 3px;
+  width: 16px;
+}
+
+.switch:checked {
+  background: var(--fg);
+}
+
+.switch:checked::before {
+  background: var(--bg);
+  left: 23px;
+}
+
+.switch:disabled {
+  cursor: wait;
+  opacity: 0.5;
 }
 
 .grid {
@@ -290,15 +335,31 @@ label {
   flex-wrap: wrap;
 }
 
+.section-title {
+  margin: 0;
+}
+
+.compact-select {
+  width: auto;
+}
+
 .participants-list {
   display: grid;
-  gap: 8px;
+  gap: 6px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .participant {
   border: 1px solid var(--line);
   font-size: 0.85rem;
-  padding: 8px;
+  padding: 6px 8px;
+}
+
+.participant.banned {
+  background: var(--soft);
 }
 
 .participant-head {
@@ -306,13 +367,29 @@ label {
   display: flex;
   gap: 8px;
   justify-content: space-between;
+  min-width: 0;
+}
+
+.participant-identity {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.participant-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .participant-meta {
   color: var(--muted);
   font-size: 0.75rem;
-  margin-top: 4px;
-  overflow-wrap: anywhere;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .footer {
@@ -473,7 +550,11 @@ td {
 }
 
 .correct-choice {
+  background: var(--soft);
   border-color: var(--fg);
+  font-weight: bold;
+  outline: 2px solid var(--fg);
+  outline-offset: -3px;
 }
 
 .word-chip {
@@ -489,6 +570,133 @@ td {
   gap: 10px 18px;
   justify-content: center;
   padding: 24px;
+}
+
+.play-page .topbar {
+  background: var(--bg);
+  gap: 10px;
+  padding: 10px 14px;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.play-page .topbar .row {
+  flex: 1;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.play-context {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.play-title {
+  max-width: 46vw;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#activity-code:empty {
+  display: none;
+}
+
+.play-nickname {
+  max-width: 22vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.play-nickname-mobile {
+  display: none;
+}
+
+.play-page .view-head {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.play-page .card {
+  overflow-wrap: anywhere;
+  padding: 14px;
+}
+
+.play-page .btn,
+.play-page .choice {
+  min-height: 44px;
+  padding: 11px 14px;
+}
+
+.play-page input {
+  font-size: 16px;
+  min-height: 44px;
+}
+
+.play-page .word-chip {
+  border: 1px solid var(--line);
+  margin: 3px 6px 3px 0;
+  padding: 4px 8px;
+}
+
+.play-page .waiting-card {
+  text-align: center;
+}
+
+body.play-page.has-cat-runner .toast {
+  bottom: 54px;
+}
+
+@media (max-width: 480px) {
+  .play-page .topbar {
+    align-items: flex-start;
+    padding: 10px 12px;
+  }
+
+  .play-page .brand {
+    font-size: 1.2rem;
+  }
+
+  .play-page .topbar .row {
+    gap: 6px;
+  }
+
+  .play-page .play-nickname {
+    display: none;
+  }
+
+  .play-page .play-nickname-mobile {
+    display: inline-block;
+  }
+
+  .play-page .container {
+    padding: 14px 12px 72px;
+  }
+
+  .play-page .card {
+    padding: 14px 12px;
+  }
+
+  .play-page h1 {
+    font-size: 1.45rem;
+  }
+
+  .play-page .choice {
+    font-size: 1rem;
+    text-align: left;
+  }
+
+  .play-page .theme-toggle {
+    padding: 9px 10px;
+  }
 }
 
 @media (max-width: 760px) {

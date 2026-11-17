@@ -8,13 +8,15 @@
     <script src="static/js/theme.js"></script>
     <link rel="stylesheet" href="static/css/base.css" />
   </head>
-  <body>
+  <body class="play-page">
     <header class="topbar">
       <a class="brand" href="index.html">[alf]</a>
       <div class="row">
-        <span class="small muted" id="activity-title"></span>
-        <span class="badge" id="activity-code"></span>
-        <span class="small muted" id="nickname-label"></span>
+        <div class="play-context">
+          <span class="small muted play-title" id="activity-title"></span>
+          <span class="badge" id="activity-code"></span>
+        </div>
+        <span class="small muted play-nickname" id="nickname-label"></span>
       </div>
     </header>
 
@@ -25,7 +27,14 @@
         <form id="join-form">
           <div class="field">
             <label for="nickname">Votre pseudo</label>
-            <input id="nickname" maxlength="60" autocomplete="nickname" required />
+            <input
+              id="nickname"
+              maxlength="60"
+              autocomplete="nickname"
+              autocapitalize="words"
+              enterkeyhint="done"
+              required
+            />
           </div>
           <button class="btn solid" type="submit">Rejoindre</button>
           <p id="join-error" class="error hidden"></p>
@@ -33,16 +42,29 @@
       </section>
 
       <section id="activity-view" class="hidden">
-        <div class="row between" style="margin-bottom: 14px">
+        <div class="view-head">
           <span class="badge" id="activity-kind"></span>
-          <span class="small muted" id="activity-title-label"></span>
+          <span class="small muted play-title" id="activity-title-label"></span>
+          <span class="badge play-nickname-mobile" id="nickname-chip"></span>
         </div>
         <div id="activity-content"></div>
       </section>
 
-      <p id="waiting" class="muted hidden">En attente de l'animateur…</p>
-      <p id="error" class="error hidden"></p>
+      <p
+        id="waiting"
+        class="muted waiting-card hidden"
+        role="status"
+        aria-live="polite"
+      >
+        En attente de l'animateur…
+      </p>
+      <p id="error" class="error hidden" role="alert"></p>
     </main>
+
+    <div class="loading-overlay" id="play-loading">
+      <div class="loader"></div>
+      <p class="muted">Chargement de l'activité…</p>
+    </div>
 
     <script src="static/js/config.js"></script>
     <script src="static/js/alf.js"></script>

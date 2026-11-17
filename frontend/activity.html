@@ -57,11 +57,16 @@
 
       <section class="card" id="participants-card">
         <div class="row between">
-          <h2 style="margin: 0">
-            Participants (<span id="participant-count">0</span>)
+          <h2 class="section-title">
+            Participants (<span
+              id="participant-count"
+              aria-live="polite"
+              aria-atomic="true"
+              >0</span
+            >)
           </h2>
           <div class="row">
-            <select id="ban-minutes" style="width: auto">
+            <select id="ban-minutes" class="compact-select">
               <option value="5">5 min</option>
               <option value="10" selected>10 min</option>
               <option value="30">30 min</option>
@@ -75,7 +80,13 @@
         <p class="small muted" style="margin-top: 10px">
           Excluez temporairement un participant qui perturbe la session.
         </p>
-        <div id="participants-list" class="participants-list"></div>
+        <div
+          id="participants-list"
+          class="participants-list"
+          role="region"
+          aria-label="Liste des participants"
+          tabindex="0"
+        ></div>
       </section>
 
       <p id="error" class="error hidden"></p>
@@ -90,10 +101,19 @@
             </div>
             <div class="field">
               <label for="activity-status">Statut</label>
-              <select id="activity-status">
-                <option value="open">Ouverte (participants acceptés)</option>
-                <option value="closed">Fermée</option>
-              </select>
+              <div class="status-control">
+                <input
+                  id="activity-status"
+                  class="switch"
+                  type="checkbox"
+                  role="switch"
+                  aria-checked="true"
+                />
+                <span class="badge" id="activity-status-label">Ouverte</span>
+              </div>
+              <p class="small muted" id="status-hint">
+                Les participants peuvent rejoindre l'activité.
+              </p>
             </div>
             <button class="btn solid" type="submit">Enregistrer</button>
           </form>

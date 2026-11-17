@@ -21,9 +21,10 @@ const activityView = document.getElementById("activity-view");
 const waiting = document.getElementById("waiting");
 const errorBox = document.getElementById("error");
 const content = document.getElementById("activity-content");
+const loading = document.getElementById("play-loading");
 
 function empty(text) {
-  return ALF.el("div", { class: "card muted" }, text);
+  return ALF.el("div", { class: "card muted waiting-card" }, text);
 }
 
 function questionIndex() {
@@ -59,7 +60,7 @@ function updateWordList() {
   }
 
   for (const text of entries) {
-    target.append(ALF.el("span", { class: "word-chip" }, text));
+    target.append(ALF.el("span", { class: "word-chip", role: "listitem" }, text));
   }
 }
 
@@ -71,7 +72,14 @@ function renderWordcloud() {
       "div",
       { class: "field" },
       ALF.el("label", { for: "word-input" }, "Votre mot"),
-      ALF.el("input", { id: "word-input", maxlength: "80", required: "required" }),
+      ALF.el("input", {
+        id: "word-input",
+        maxlength: "80",
+        autocomplete: "off",
+        autocapitalize: "off",
+        enterkeyhint: "send",
+        required: "required",
+      }),
     ),
     ALF.el("button", { class: "btn solid", type: "submit" }, "Envoyer"),
   );
@@ -109,7 +117,17 @@ function renderWordcloud() {
   });
 
   content.append(form);
-  content.append(ALF.el("div", { class: "card" }, ALF.el("div", { id: "word-list" })));
+  content.append(
+    ALF.el(
+      "div",
+      { class: "card" },
+      ALF.el("div", {
+        id: "word-list",
+        role: "list",
+        "aria-live": "polite",
+      }),
+    ),
+  );
   updateWordList();
 }
 
@@ -187,7 +205,7 @@ function renderQuestion() {
     content.append(
       ALF.el(
         "div",
-        { class: "card" },
+        { class: "card play-feedback", role: "status" },
         `Bonne réponse : ${question.options[question.correct_index]}.${feedback}`,
       ),
     );
@@ -241,6 +259,7 @@ async function render() {
 
   joinView.classList.add("hidden");
   document.getElementById("nickname-label").textContent = participant.nickname;
+  document.getElementById("nickname-chip").textContent = participant.nickname;
 
   if (activity.status === "closed") {
     activityView.classList.add("hidden");
@@ -267,10 +286,19 @@ async function render() {
 
 async function handleMessage(message) {
   switch (message.type) {
-    case "activity_updated":
+    case "activity_updated": {
       activity = message.activity;
+      const wordInput = document.getElementById("word-input");
+      const draft = wordInput?.value ?? "";
+      const caret = wordInput?.selectionStart ?? null;
       await render();
+      const restored = document.getElementById("word-input");
+      if (restored && draft) {
+        restored.value = draft;
+        if (caret !== null) restored.setSelectionRange(caret, caret);
+      }
       break;
+    }
     case "word_snapshot":
       occurrences = message.occurrences || {};
       updateWordList();
@@ -310,7 +338,10 @@ async function connectSocket() {
   try {
     socket = await ALF.connect(code, handleMessage);
     socket.onclose = () => {
-      if (!stopped) reconnectTimer = window.setTimeout(connectSocket, 2000);
+      if (!stopped) {
+        ALF.toast("Reconnexion…");
+        reconnectTimer = window.setTimeout(connectSocket, 2000);
+      }
     };
   } catch {
     if (!stopped) reconnectTimer = window.setTimeout(connectSocket, 2000);
@@ -353,5 +384,7 @@ document.getElementById("join-form").addEventListener("submit", async (event) =>
     connectSocket();
   } catch (error) {
     ALF.showError(errorBox, error);
+  } finally {
+    loading.classList.add("hidden");
   }
 })();

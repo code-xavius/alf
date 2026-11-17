@@ -29,6 +29,9 @@ const embedModal = document.getElementById("embed-modal");
 const participantCountLabel = document.getElementById("participant-count");
 const participantsList = document.getElementById("participants-list");
 const participantsRefresh = document.getElementById("participants-refresh");
+const activityStatus = document.getElementById("activity-status");
+const activityStatusLabel = document.getElementById("activity-status-label");
+const statusHint = document.getElementById("status-hint");
 
 let activity = null;
 let participants = [];
@@ -36,6 +39,7 @@ let participantsTimer = null;
 let socket = null;
 let stopped = false;
 let reconnectTimer = null;
+let statusPending = false;
 
 function participantUrl() {
   const url = new URL("play.html", window.location.href);
@@ -62,6 +66,18 @@ function embedSnippet() {
   return `<iframe src="${src}" width="960" height="540" style="border:0" allowfullscreen title="${escapeAttribute(activity.title)}"></iframe>`;
 }
 
+function renderStatus() {
+  if (!activity) return;
+  const open = activity.status === "open";
+  activityStatus.checked = open;
+  activityStatus.disabled = statusPending;
+  activityStatus.setAttribute("aria-checked", String(open));
+  activityStatusLabel.textContent = open ? "Ouverte" : "Fermée";
+  statusHint.textContent = open
+    ? "Les participants peuvent rejoindre l'activité."
+    : "Les nouveaux participants sont refusés.";
+}
+
 async function loadActivity() {
   activity = await ALF.api(`/activities/${activityId}`);
   render();
@@ -72,7 +88,7 @@ async function render() {
   document.getElementById("title").textContent = activity.title;
   document.getElementById("code").textContent = activity.code;
   document.getElementById("activity-title").value = activity.title;
-  document.getElementById("activity-status").value = activity.status;
+  renderStatus();
   document.getElementById("present-link").href = `present.html?code=${activity.code}`;
   participantUrlLabel.textContent = participantUrl();
   document.getElementById("embed-code").value = embedSnippet();
@@ -221,6 +237,7 @@ function renderResults(results) {
 }
 
 function renderParticipants() {
+  const scrollTop = participantsList.scrollTop;
   participantCountLabel.textContent = String(participants.length);
   ALF.clear(participantsList);
 
@@ -229,7 +246,11 @@ function renderParticipants() {
     return;
   }
 
-  for (const participant of participants) {
+  const ordered = [...participants].sort(
+    (left, right) => Number(left.banned) - Number(right.banned),
+  );
+
+  for (const participant of ordered) {
     const banned = participant.banned;
     const meta = [
       participant.ip || "IP inconnue",
@@ -238,29 +259,38 @@ function renderParticipants() {
         ? `exclu jusqu'à ${ALF.formatDate(participant.banned_until)}`
         : `arrivé le ${ALF.formatDate(participant.created_at)}`,
     ].join(" · ");
+    const action = banned ? "Réactiver" : "Exclure";
 
     participantsList.append(
       ALF.el(
         "article",
-        { class: "participant" },
+        { class: `participant${banned ? " banned" : ""}` },
         ALF.el(
           "div",
           { class: "participant-head" },
-          ALF.el("strong", {}, participant.nickname),
+          ALF.el(
+            "div",
+            { class: "participant-identity" },
+            ALF.el("strong", { class: "participant-name" }, participant.nickname),
+            banned ? ALF.el("span", { class: "badge" }, "Exclu") : null,
+          ),
           ALF.el(
             "button",
             {
               class: "btn small",
               type: "button",
+              "aria-label": `${action} ${participant.nickname}`,
               onclick: () => setBan(participant, banned ? 0 : banMinutes()),
             },
-            banned ? "Réactiver" : "Exclure",
+            action,
           ),
         ),
         ALF.el("div", { class: "participant-meta" }, meta),
       ),
     );
   }
+
+  participantsList.scrollTop = scrollTop;
 }
 
 async function loadParticipants() {
@@ -383,6 +413,8 @@ function handleMessage(message) {
     case "activity_updated":
       if (message.activity?.id === activity.id) {
         activity.state = message.activity.state;
+        activity.status = message.activity.status;
+        renderStatus();
         renderPresentationControls();
       }
       break;
@@ -467,13 +499,36 @@ document.getElementById("settings-form").addEventListener("submit", async (event
       method: "PATCH",
       body: {
         title: document.getElementById("activity-title").value.trim(),
-        status: document.getElementById("activity-status").value,
       },
     });
     await loadActivity();
-    ALF.toast("Réglages enregistrés.");
+    ALF.toast("Titre enregistré.");
   } catch (error) {
     ALF.showError(errorBox, error);
+  }
+});
+
+activityStatus.addEventListener("change", async () => {
+  if (!activity || statusPending) return;
+  const previous = activity.status;
+  const status = activityStatus.checked ? "open" : "closed";
+  activity.status = status;
+  statusPending = true;
+  renderStatus();
+
+  try {
+    const updated = await ALF.api(`/activities/${activity.id}`, {
+      method: "PATCH",
+      body: { status },
+    });
+    activity.status = updated.status;
+    ALF.toast(updated.status === "open" ? "Activité ouverte." : "Activité fermée.");
+  } catch (error) {
+    activity.status = previous;
+    ALF.toast(error.message);
+  } finally {
+    statusPending = false;
+    renderStatus();
   }
 });
 
