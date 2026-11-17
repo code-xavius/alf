@@ -393,6 +393,7 @@ async function handleMessage(message) {
     case "participant_joined":
       participantCount = message.participant_count ?? participantCount;
       renderStage();
+      void syncFromServer();
       break;
     case "activity_updated": {
       const previousSignature = questionSignature();
@@ -444,10 +445,37 @@ function updateParticipantCount() {
   document.getElementById("participant-count").textContent = String(participantCount);
 }
 
+let syncing = false;
+
+async function syncFromServer() {
+  if (stopped || !activity || syncing) return;
+  syncing = true;
+  try {
+    const latest = await ALF.api(`/activities/code/${activity.code}`, { auth: false });
+    activity = latest;
+    participantCount = latest.participant_count || 0;
+    document.getElementById("activity-title").textContent = latest.title;
+    document.getElementById("activity-code").textContent = latest.code;
+    if (latest.kind === "wordcloud") {
+      await loadWords();
+    } else {
+      await refreshResults(false);
+    }
+    scheduleRender();
+  } catch {
+  } finally {
+    syncing = false;
+  }
+}
+
 async function connectSocket() {
   if (stopped || !activity) return;
   try {
     socket = await ALF.connect(activity.code, handleMessage);
+    socket.onopen = () => {
+      void syncFromServer();
+    };
+    if (socket.readyState === WebSocket.OPEN) void syncFromServer();
     socket.onclose = () => {
       if (!stopped) reconnectTimer = window.setTimeout(connectSocket, 2000);
     };
@@ -565,6 +593,9 @@ document.getElementById("quit").addEventListener("click", () => {
     renderStage();
     connectSocket();
 
+    window.setInterval(() => {
+      if (!stopped) void syncFromServer();
+    }, 10000);
     window.addEventListener("resize", scheduleRender);
   } catch (error) {
     ALF.toast(error.message);

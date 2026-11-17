@@ -1,3 +1,4 @@
+from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 
 from app.config import settings
@@ -396,3 +397,45 @@ async def test_participant_list_and_temporary_ban() -> None:
 
         rejoined = await join(http, activity["code"], "Alice", device_id="device-a")
         assert rejoined["id"] == alice["id"]
+
+
+def test_presenter_receives_live_updates(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "realtime_url", None)
+    monkeypatch.setattr(settings, "internal_token", None)
+
+    with TestClient(app) as http:
+        created = http.post(
+            "/api/activities",
+            json={"kind": "wordcloud", "title": "Nuage direct", "config": {}},
+        )
+        assert created.status_code == 201, created.text
+        activity = created.json()
+
+        with http.websocket_connect(f"/ws/{activity['code']}") as socket:
+            assert socket.receive_json()["type"] == "presence"
+
+            joined = http.post(
+                f"/api/activities/code/{activity['code']}/join",
+                json={"nickname": "Alice"},
+            )
+            assert joined.status_code == 200, joined.text
+            participant = joined.json()
+
+            event = socket.receive_json()
+            assert event["type"] == "participant_joined"
+            assert event["participant_count"] == 1
+
+            socket.send_json(
+                {
+                    "type": "word",
+                    "text": "Nuage",
+                    "participant_id": participant["id"],
+                }
+            )
+            event = socket.receive_json()
+            assert event["type"] == "word_added"
+            assert event["text"] == "Nuage"
+
+        public = http.get(f"/api/activities/{activity['id']}/words/public")
+        assert public.status_code == 200, public.text
+        assert [word["text"] for word in public.json()] == ["Nuage"]

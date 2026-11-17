@@ -1,15 +1,20 @@
+import json
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from pydantic import ValidationError
 
 from .config import settings
-from .db import init_db
+from .db import SessionLocal, init_db
+from .deps import load_activity_by_code
 from .realtime import manager
 from .routers import activities, questions, system, words
+from .routers.words import add_word
+from .schemas import WordCreate
 
 logger = logging.getLogger("alf")
 
@@ -51,8 +56,28 @@ async def websocket_endpoint(websocket: WebSocket, code: str) -> None:
     await manager.broadcast(code, {"type": "presence", "count": manager.count(code)})
     try:
         while True:
-            # Participants only listen; receiving keeps the connection alive.
-            await websocket.receive_text()
+            raw = await websocket.receive_text()
+            try:
+                payload = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(payload, dict) or payload.get("type") != "word":
+                continue
+            try:
+                word = WordCreate(
+                    text=payload.get("text"),
+                    participant_id=payload.get("participant_id"),
+                )
+            except ValidationError:
+                continue
+            async with SessionLocal() as db:
+                activity = await load_activity_by_code(db, code)
+                if activity is None:
+                    continue
+                try:
+                    await add_word(activity.id, word, db)
+                except HTTPException:
+                    continue
     except WebSocketDisconnect:
         pass
     finally:
