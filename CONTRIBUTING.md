@@ -41,13 +41,22 @@ Run these before opening a pull request:
 cd backend
 ruff check .
 pytest -q
+
+cd ../cloudflare
+npm run typecheck
+npx wrangler deploy --dry-run
 ```
 
 ## Guidelines
 
 - Keep the stack small: no frontend framework and no build step without a clear
   reason.
-- Match the existing black-and-white monospace design.
+- Respect the existing monospace design and theme tokens in `base.css`; check
+  both light and dark modes for UI changes.
 - Add or update tests for backend behaviour changes.
+- Update `README.md` when behaviour, configuration, deployment or capacity
+  assumptions change.
+- Keep `CGU.md`, `CONFIDENTIALITE.md` and `COOKIES.md` in sync with the actual
+  third-party services, data flows and local storage keys.
 - Do not commit secrets, `.env` files, or database files.
 - Keep pull requests focused. Describe the problem and the change.

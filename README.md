@@ -15,10 +15,15 @@ données.
 - **Votes** : sondez la salle et affichez les résultats.
 - **Quiz** : questions à choix multiples, réponses en temps réel, bonne réponse
   révélée quand l'animateur le décide.
-- **Quiz vidéo / audio** : utilisez une vidéo YouTube et affichez les questions
+- **Quiz vidéo YouTube** : utilisez une vidéo YouTube et affichez les questions
   à des moments précis.
-- **Activités autonomes** : chaque activité a son propre code à six caractères,
-  son écran de présentation et sa page participant.
+- **Activités autonomes** : chaque activité a son propre code court (six
+  caractères par défaut), son écran de présentation et sa page participant.
+- **Présentation** : écran dédié, QR code de connexion (y compris en mode
+  iframe/embed), navigation clavier (`←` / `→`) et résultats en direct.
+- **Gestion des participants** : compteur en direct, exclusion temporaire et
+  réactivation depuis la page de configuration de l'activité.
+- **Confort** : thème clair/sombre mémorisé dans le navigateur.
 - **Historique** : les réponses et les mots sont conservés en base, avec export
   CSV des résultats.
 
@@ -36,12 +41,28 @@ alf-v2/
 - Backend : FastAPI + SQLAlchemy 2 (async), SQLite en local, PostgreSQL
   (Supabase) en production.
 - Temps réel : Worker Cloudflare avec un Durable Object par activité. Le DO
-  garde les WebSockets, agrège les mots et diffuse des snapshots. Les mots sont
-  ensuite envoyés au backend par lots pour la persistance Supabase.
+  utilise l'API WebSocket Hibernation : il est mis en veille quand aucun message
+  n'est traité, tout en gardant les connexions ouvertes. Il agrège les mots et
+  diffuse des snapshots ; les mots sont envoyés au backend par lots (alarme de
+  1 s) pour la persistance Supabase.
 - Fallback local : si `REALTIME_URL` est vide, le backend utilise son ancien
   gestionnaire WebSocket en mémoire.
 - Authentification : Supabase Auth (email / mot de passe). Le frontend obtient
   un jeton et le backend le vérifie.
+
+## Capacité indicative
+
+Avec l'offre gratuite actuelle (Render 0,1 CPU / 512 Mo, Cloudflare Workers
+Free, Supabase Free), comptez environ :
+
+- 5 sessions de 100 participants en wordcloud actif, 10 maximum en pointe ;
+- 10 à 20 sessions de quiz/vote si les réponses sont étalées ;
+- 40 à 80 sessions par jour selon le volume de mots, limité par les quotas
+  Cloudflare plutôt que par le nombre de WebSockets.
+
+Ces chiffres sont des ordres de grandeur à valider par un test de charge avant
+un événement important. Pour 20 à 30 sessions simultanées, prévoyez une offre
+Render payante et Supabase Pro.
 
 ## Démarrage local
 
@@ -155,6 +176,16 @@ docker compose up --build
 
 Ouvrez <http://localhost:8000>. Le frontend est servi par le backend et les
 données SQLite sont conservées dans un volume.
+
+## Documentation et pages légales
+
+- [CGU](CGU.md)
+- [Politique de confidentialité](CONFIDENTIALITE.md)
+- [Cookies et stockage local](COOKIES.md)
+- [Contribuer](CONTRIBUTING.md)
+
+Les pages légales sont des modèles à adapter à l'éditeur réel et à faire
+valider juridiquement avant mise en production.
 
 ## Tests et qualité
 
