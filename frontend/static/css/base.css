@@ -290,6 +290,31 @@ label {
   flex-wrap: wrap;
 }
 
+.participants-list {
+  display: grid;
+  gap: 8px;
+}
+
+.participant {
+  border: 1px solid var(--line);
+  font-size: 0.85rem;
+  padding: 8px;
+}
+
+.participant-head {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.participant-meta {
+  color: var(--muted);
+  font-size: 0.75rem;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
 .footer {
   border-top: 1px solid var(--line);
   display: flex;

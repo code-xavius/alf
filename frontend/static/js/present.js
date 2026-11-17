@@ -22,8 +22,6 @@ let ytPlayer = null;
 let ytApiPromise = null;
 let videoFrame = null;
 
-let participants = [];
-
 function empty(text) {
   return ALF.el("div", { class: "stage-empty" }, text);
 }
@@ -215,32 +213,6 @@ function renderQuestion(stage) {
   );
   stage.append(ALF.el("div", { class: "big-question" }, question.prompt));
   stage.append(optionsBars(question, result, !!state.revealed));
-
-  const controls = ALF.el("div", { class: "controls" });
-  controls.append(
-    button(
-      "Précédent",
-      () => patchState({ current_question: index - 1, revealed: false }),
-      false,
-      index === 0,
-    ),
-  );
-  controls.append(
-    button(
-      "Suivant",
-      () => patchState({ current_question: index + 1, revealed: false }),
-      false,
-      index >= activity.questions.length - 1,
-    ),
-  );
-  if (question.kind === "mcq") {
-    controls.append(
-      button(state.revealed ? "Cacher la réponse" : "Révéler", () =>
-        patchState({ revealed: !state.revealed }),
-      ),
-    );
-  }
-  stage.append(controls);
 }
 
 function renderVideo(stage) {
@@ -321,13 +293,6 @@ function updateVideoUI() {
     videoFrame.controls.append(
       button("Fermer la question", () => patchState({ question_open: false })),
     );
-    if (question.kind === "mcq") {
-      videoFrame.controls.append(
-        button(state.revealed ? "Cacher la réponse" : "Révéler", () =>
-          patchState({ revealed: !state.revealed }),
-        ),
-      );
-    }
   }
 }
 
@@ -428,11 +393,6 @@ async function handleMessage(message) {
     case "participant_joined":
       participantCount = message.participant_count ?? participantCount;
       renderStage();
-      if (participantsOpen()) await loadParticipants();
-      break;
-    case "participant_banned":
-    case "participant_unbanned":
-      if (participantsOpen()) await loadParticipants();
       break;
     case "activity_updated": {
       const previousSignature = questionSignature();
@@ -484,77 +444,6 @@ function updateParticipantCount() {
   document.getElementById("participant-count").textContent = String(participantCount);
 }
 
-function renderParticipants() {
-  const target = document.getElementById("participants-list");
-  ALF.clear(target);
-
-  if (participants.length === 0) {
-    target.append(ALF.el("p", { class: "muted small" }, "Aucun participant."));
-    return;
-  }
-
-  for (const participant of participants) {
-    const banned = participant.banned;
-    const meta = [
-      participant.ip || "IP inconnue",
-      participant.user_agent || "navigateur inconnu",
-      banned
-        ? `exclu jusqu'à ${ALF.formatDate(participant.banned_until)}`
-        : `arrivé le ${ALF.formatDate(participant.created_at)}`,
-    ].join(" · ");
-
-    target.append(
-      ALF.el(
-        "article",
-        { class: "participant" },
-        ALF.el(
-          "div",
-          { class: "participant-head" },
-          ALF.el("strong", {}, participant.nickname),
-          banned
-            ? button("Réactiver", () => setBan(participant, 0))
-            : button("Exclure", () => setBan(participant, banMinutes())),
-        ),
-        ALF.el("div", { class: "participant-meta" }, meta),
-      ),
-    );
-  }
-}
-
-async function loadParticipants() {
-  try {
-    participants = await ALF.api(`/activities/${activity.id}/participants`);
-    renderParticipants();
-  } catch (error) {
-    ALF.toast(error.message);
-  }
-}
-
-function banMinutes() {
-  return Number(document.getElementById("ban-minutes").value) || 10;
-}
-
-async function setBan(participant, minutes) {
-  try {
-    await ALF.api(`/activities/${activity.id}/participants/${participant.id}/ban`, {
-      method: "POST",
-      body: { minutes },
-    });
-    await loadParticipants();
-    ALF.toast(
-      minutes > 0
-        ? `${participant.nickname} exclu ${minutes} min.`
-        : `${participant.nickname} réactivé.`,
-    );
-  } catch (error) {
-    ALF.toast(error.message);
-  }
-}
-
-function participantsOpen() {
-  return !document.getElementById("participants-panel").classList.contains("hidden");
-}
-
 async function connectSocket() {
   if (stopped || !activity) return;
   try {
@@ -601,14 +490,46 @@ function renderQr() {
   if (embedMode) renderQrInto(document.getElementById("embed-qrcode"), url);
 }
 
-document.getElementById("participants-toggle").addEventListener("click", async () => {
-  const panel = document.getElementById("participants-panel");
-  const hidden = panel.classList.toggle("hidden");
-  document.getElementById("participants-toggle").textContent = hidden ? "Afficher" : "Masquer";
-  if (!hidden) await loadParticipants();
-});
+function navigate(direction) {
+  if (embedMode || !activity || activity.kind === "wordcloud") return;
+  if (activity.questions.length === 0) return;
 
-document.getElementById("participants-refresh").addEventListener("click", loadParticipants);
+  const index = questionIndex();
+  const total = activity.questions.length;
+  const question = activity.questions[index];
+  const state = activity.state || {};
+
+  if (direction > 0) {
+    if (activity.kind === "video" && !state.question_open) return;
+    if (question.kind === "mcq" && !state.revealed) {
+      patchState({ revealed: true });
+      return;
+    }
+    if (index < total - 1) {
+      patchState({ current_question: index + 1, revealed: false });
+    }
+    return;
+  }
+
+  if (index > 0) {
+    patchState({ current_question: index - 1, revealed: false });
+  }
+}
+
+document.addEventListener("keydown", (event) => {
+  if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+  const target = event.target;
+  if (target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) {
+    return;
+  }
+  if (event.key === "ArrowRight") {
+    event.preventDefault();
+    navigate(1);
+  } else if (event.key === "ArrowLeft") {
+    event.preventDefault();
+    navigate(-1);
+  }
+});
 
 document.getElementById("quit").addEventListener("click", () => {
   stopped = true;

@@ -26,8 +26,16 @@ const controlNext = document.getElementById("control-next");
 const controlReveal = document.getElementById("control-reveal");
 const controlQuestionOpen = document.getElementById("control-question-open");
 const embedModal = document.getElementById("embed-modal");
+const participantCountLabel = document.getElementById("participant-count");
+const participantsList = document.getElementById("participants-list");
+const participantsRefresh = document.getElementById("participants-refresh");
 
 let activity = null;
+let participants = [];
+let participantsTimer = null;
+let socket = null;
+let stopped = false;
+let reconnectTimer = null;
 
 function participantUrl() {
   const url = new URL("play.html", window.location.href);
@@ -80,6 +88,7 @@ async function render() {
   updateCorrectField();
   renderPresentationControls();
 
+  await loadParticipants();
   renderQuestions();
   await loadResults();
 }
@@ -211,6 +220,85 @@ function renderResults(results) {
   }
 }
 
+function renderParticipants() {
+  participantCountLabel.textContent = String(participants.length);
+  ALF.clear(participantsList);
+
+  if (participants.length === 0) {
+    participantsList.append(ALF.el("p", { class: "muted small" }, "Aucun participant."));
+    return;
+  }
+
+  for (const participant of participants) {
+    const banned = participant.banned;
+    const meta = [
+      participant.ip || "IP inconnue",
+      participant.user_agent || "navigateur inconnu",
+      banned
+        ? `exclu jusqu'à ${ALF.formatDate(participant.banned_until)}`
+        : `arrivé le ${ALF.formatDate(participant.created_at)}`,
+    ].join(" · ");
+
+    participantsList.append(
+      ALF.el(
+        "article",
+        { class: "participant" },
+        ALF.el(
+          "div",
+          { class: "participant-head" },
+          ALF.el("strong", {}, participant.nickname),
+          ALF.el(
+            "button",
+            {
+              class: "btn small",
+              type: "button",
+              onclick: () => setBan(participant, banned ? 0 : banMinutes()),
+            },
+            banned ? "Réactiver" : "Exclure",
+          ),
+        ),
+        ALF.el("div", { class: "participant-meta" }, meta),
+      ),
+    );
+  }
+}
+
+async function loadParticipants() {
+  if (!activity) return;
+  try {
+    participants = await ALF.api(`/activities/${activity.id}/participants`);
+    renderParticipants();
+  } catch (error) {
+    ALF.toast(error.message);
+  }
+}
+
+function scheduleParticipantsReload() {
+  window.clearTimeout(participantsTimer);
+  participantsTimer = window.setTimeout(loadParticipants, 300);
+}
+
+function banMinutes() {
+  return Number(document.getElementById("ban-minutes").value) || 10;
+}
+
+async function setBan(participant, minutes) {
+  try {
+    await ALF.api(`/activities/${activity.id}/participants/${participant.id}/ban`, {
+      method: "POST",
+      body: { minutes },
+    });
+    await loadParticipants();
+    ALF.toast(
+      minutes > 0
+        ? `${participant.nickname} exclu ${minutes} min.`
+        : `${participant.nickname} réactivé.`,
+    );
+  } catch (error) {
+    ALF.toast(error.message);
+  }
+}
+
 function updateCorrectField() {
   const kind = activity.kind === "poll" ? "poll" : questionKindSelect.value;
   correctField.classList.toggle("hidden", kind === "poll");
@@ -277,6 +365,41 @@ async function patchPresentationState(patch) {
     activity.state = previous;
     renderPresentationControls();
     ALF.toast(error.message);
+  }
+}
+
+function handleMessage(message) {
+  switch (message.type) {
+    case "participant_joined":
+      if (typeof message.participant_count === "number") {
+        participantCountLabel.textContent = String(message.participant_count);
+      }
+      scheduleParticipantsReload();
+      break;
+    case "participant_banned":
+    case "participant_unbanned":
+      scheduleParticipantsReload();
+      break;
+    case "activity_updated":
+      if (message.activity?.id === activity.id) {
+        activity.state = message.activity.state;
+        renderPresentationControls();
+      }
+      break;
+    default:
+      break;
+  }
+}
+
+async function connectSocket() {
+  if (stopped || !activity) return;
+  try {
+    socket = await ALF.connect(activity.code, handleMessage);
+    socket.onclose = () => {
+      if (!stopped) reconnectTimer = window.setTimeout(connectSocket, 2000);
+    };
+  } catch {
+    if (!stopped) reconnectTimer = window.setTimeout(connectSocket, 2000);
   }
 }
 
@@ -391,6 +514,8 @@ questionKindSelect.addEventListener("change", updateCorrectField);
 
 document.getElementById("refresh-results").addEventListener("click", loadResults);
 
+participantsRefresh.addEventListener("click", loadParticipants);
+
 document.getElementById("copy-link").addEventListener("click", async () => {
   const url = participantUrl();
   try {
@@ -429,6 +554,7 @@ document.getElementById("logout").addEventListener("click", () => ALF.logout());
     await ALF.requireAuth();
     if (!activityId) throw new Error("Activité manquante.");
     await loadActivity();
+    connectSocket();
   } catch (error) {
     ALF.showError(errorBox, error);
   }

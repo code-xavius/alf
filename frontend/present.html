@@ -32,28 +32,8 @@
         </div>
 
         <div class="card sidebar-card">
-          <div class="row between">
-            <h2 style="margin: 0">
-              Participants (<span id="participant-count">0</span>)
-            </h2>
-            <button class="btn small" id="participants-toggle" type="button">
-              Afficher
-            </button>
-          </div>
-          <div id="participants-panel" class="hidden">
-            <div class="row" style="margin: 10px 0">
-              <select id="ban-minutes" style="width: auto">
-                <option value="5">5 min</option>
-                <option value="10" selected>10 min</option>
-                <option value="30">30 min</option>
-                <option value="60">60 min</option>
-              </select>
-              <button class="btn small" id="participants-refresh" type="button">
-                Actualiser
-              </button>
-            </div>
-            <div id="participants-list" class="participants-list"></div>
-          </div>
+          <h2>Participants</h2>
+          <p class="participant-total" id="participant-count">0</p>
         </div>
       </aside>
     </main>

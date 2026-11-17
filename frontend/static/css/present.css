@@ -201,29 +201,10 @@ body.embed-mode .embed-qr {
   position: absolute;
 }
 
-.participants-list {
-  display: grid;
-  gap: 8px;
-}
-
-.participant {
-  border: 1px solid var(--line);
-  font-size: 0.85rem;
-  padding: 8px;
-}
-
-.participant-head {
-  align-items: center;
-  display: flex;
-  gap: 8px;
-  justify-content: space-between;
-}
-
-.participant-meta {
-  color: var(--muted);
-  font-size: 0.75rem;
-  margin-top: 4px;
-  overflow-wrap: anywhere;
+.participant-total {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: bold;
+  margin: 0;
 }
 
 @media (max-width: 900px) {
