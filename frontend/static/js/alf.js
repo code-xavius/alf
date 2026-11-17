@@ -12,15 +12,6 @@ const ALF = (() => {
   const ANSWERS_PREFIX = "alf_answers_";
   const THEME_KEY = "alf_theme";
 
-  const CAT_FACE_SVG = `
-    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
-      <path fill="currentColor" d="M32 8.5c-4 0-7.8 1.1-11 3.1L15.7 4l1.2 11.4A22.8 22.8 0 0 0 9 32.3C9 45 19.7 55.3 32 55.3S55 45 55 32.3c0-6.4-2.7-12.2-7.1-16.3L49.3 4l-6.1 7.6A22.8 22.8 0 0 0 32 8.5Z"/>
-      <circle cx="24" cy="31" r="2.8" fill="#fff"/>
-      <circle cx="40" cy="31" r="2.8" fill="#fff"/>
-      <path d="M29 39h6l-3 4.2Z" fill="#fff"/>
-      <path d="M13 34H5M13 39l-8 2M51 34h8M51 39l8 2" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="1.8"/>
-    </svg>`;
-
   const CAT_RUNNER_SVG = `
     <svg viewBox="0 0 80 48" aria-hidden="true" focusable="false">
       <path fill="currentColor" d="M18 20c-7 0-12 4-15 10 4-2 8-2 11 0 2-4 6-6 11-6Z"/>
@@ -406,6 +397,5 @@ const ALF = (() => {
     escapeHtml,
     formatDate,
     showError,
-    catFaceSvg: CAT_FACE_SVG,
   };
 })();

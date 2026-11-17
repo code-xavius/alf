@@ -478,7 +478,11 @@ function renderQrInto(target, url) {
   const frame = ALF.el("div", { class: "qr-frame" });
   frame.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 1, scalable: true });
   frame.append(
-    ALF.el("span", { class: "qr-cat", "aria-hidden": "true", html: ALF.catFaceSvg }),
+    ALF.el(
+      "span",
+      { class: "qr-cat", "aria-hidden": "true" },
+      ALF.el("img", { src: "static/img/cat-head.svg", alt: "" }),
+    ),
   );
   target.append(frame);
 }

@@ -103,7 +103,6 @@ body.embed-mode .controls {
   background: #fff;
   border-radius: 50%;
   box-sizing: border-box;
-  color: #000;
   display: flex;
   justify-content: center;
   left: 50%;
@@ -115,7 +114,7 @@ body.embed-mode .controls {
   width: 22%;
 }
 
-.qr-cat svg {
+.qr-cat img {
   display: block;
   height: 100%;
   width: 100%;
