@@ -240,6 +240,92 @@ async def test_public_results_for_embed() -> None:
         assert revealed.json()["questions"][0]["correct_index"] == 1
 
 
+async def test_user_can_use_wordcloud_and_quiz() -> None:
+    async with await client() as http:
+        wordcloud = await create_activity(http, "wordcloud", "Nuage utilisateur")
+        alice = await join(http, wordcloud["code"], "Alice", device_id="sim-alice")
+        bob = await join(http, wordcloud["code"], "Bob", device_id="sim-bob")
+
+        submissions = (
+            (alice["id"], "Python"),
+            (bob["id"], "Python"),
+            (bob["id"], "Rust"),
+        )
+        for participant_id, text in submissions:
+            sent = await http.post(
+                f"/api/activities/{wordcloud['id']}/words",
+                json={"text": text, "participant_id": participant_id},
+            )
+            assert sent.status_code == 201, sent.text
+
+        visible_words = (
+            await http.get(f"/api/activities/{wordcloud['id']}/words/public")
+        ).json()
+        assert [word["text"] for word in visible_words] == ["Python", "Python", "Rust"]
+
+        cloud_results = (
+            await http.get(f"/api/activities/{wordcloud['id']}/results")
+        ).json()
+        assert cloud_results["words"] == [
+            {"text": "Python", "count": 2},
+            {"text": "Rust", "count": 1},
+        ]
+
+        quiz = await create_activity(http, "quiz", "Quiz utilisateur")
+        question = (
+            await http.post(
+                f"/api/activities/{quiz['id']}/questions",
+                json={
+                    "prompt": "Capitale de la France ?",
+                    "kind": "mcq",
+                    "options": ["Lyon", "Paris"],
+                    "correct_index": 1,
+                },
+            )
+        ).json()
+        quiz_alice = await join(http, quiz["code"], "Alice", device_id="quiz-alice")
+        quiz_bob = await join(http, quiz["code"], "Bob", device_id="quiz-bob")
+
+        wrong = await http.post(
+            f"/api/questions/{question['id']}/responses",
+            json={"participant_id": quiz_alice["id"], "value": 0},
+        )
+        assert wrong.status_code == 200, wrong.text
+        assert wrong.json()["is_correct"] is False
+
+        right = await http.post(
+            f"/api/questions/{question['id']}/responses",
+            json={"participant_id": quiz_alice["id"], "value": 1},
+        )
+        assert right.json() == {"recorded": True, "updated": True, "is_correct": True}
+
+        other = await http.post(
+            f"/api/questions/{question['id']}/responses",
+            json={"participant_id": quiz_bob["id"], "value": 0},
+        )
+        assert other.json()["is_correct"] is False
+
+        public_quiz = (await http.get(f"/api/activities/code/{quiz['code']}")).json()
+        assert public_quiz["questions"][0]["correct_index"] is None
+
+        quiz_results = (await http.get(f"/api/activities/{quiz['id']}/results")).json()
+        assert quiz_results["questions"][0]["counts"] == [1, 1]
+        assert quiz_results["questions"][0]["total"] == 2
+
+        await http.patch(
+            f"/api/activities/{quiz['id']}",
+            json={"state": {"current_question": 0, "revealed": True}},
+        )
+        revealed = (await http.get(f"/api/activities/code/{quiz['code']}")).json()
+        assert revealed["questions"][0]["correct_index"] == 1
+
+        locked = await http.post(
+            f"/api/questions/{question['id']}/responses",
+            json={"participant_id": quiz_bob["id"], "value": 1},
+        )
+        assert locked.status_code == 400
+
+
 async def test_close_and_delete_activity() -> None:
     async with await client() as http:
         activity = await create_activity(http, "wordcloud", "À fermer")
